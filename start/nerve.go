@@ -1,4 +1,4 @@
-package start
+package main
 
 import (
 	"gitlab.com/iotTracker/nerve/log"
@@ -13,7 +13,7 @@ func main() {
 	ZX303Server := zx303Server.New()
 	go func() {
 		err := ZX303Server.Start(&nerveServer.StartRequest{
-			Port:      "5023",
+			Port:      "5021",
 			IPAddress: "0.0.0.0",
 		})
 		log.Fatal("zx303 server stopped: ", err.Error())
