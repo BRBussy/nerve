@@ -62,8 +62,6 @@ func (s *server) handleConnection(c net.Conn) {
 	}
 }
 
-// data structure: 787807101304011333270D0A
-// 7878 01 08 0d0a
 const startMarker = "7878"
 const endMarker = "0d0a"
 
