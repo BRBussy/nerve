@@ -12,6 +12,10 @@ type server struct {
 	IPAddress string
 }
 
+func New() nerveServer.Server {
+	return &server{}
+}
+
 func (s *server) Start(request *nerveServer.StartRequest) error {
 	s.Port = request.Port
 	s.IPAddress = request.IPAddress
