@@ -7,7 +7,7 @@ func (t Type) String() string {
 }
 
 const Login Type = "01"
-const HeartBeat Type = "08"
+const Heartbeat Type = "08"
 const GPSPositioning Type = "10"
 const Status Type = "13"
 const DeviceHibernation Type = "14"
@@ -23,7 +23,7 @@ const StopDataUpload Type = "44"
 
 var ValidType = map[Type]bool{
 	Login:                  true,
-	HeartBeat:              true,
+	Heartbeat:              true,
 	GPSPositioning:         true,
 	Status:                 true,
 	DeviceHibernation:      true,

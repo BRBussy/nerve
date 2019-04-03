@@ -1,4 +1,4 @@
-package login
+package heartbeat
 
 import (
 	"gitlab.com/iotTracker/nerve/log"
@@ -28,7 +28,7 @@ func (h *handler) Handle(message *zx303ServerMessage.Message) (*zx303ServerMessa
 		return nil, err
 	}
 
-	log.Info("Handling Login")
+	log.Info("Handling Heartbeat")
 
 	return &zx303ServerMessage.Message{}, nil
 }

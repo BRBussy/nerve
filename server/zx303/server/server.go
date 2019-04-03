@@ -7,20 +7,33 @@ import (
 	"gitlab.com/iotTracker/nerve/log"
 	nerveServer "gitlab.com/iotTracker/nerve/server"
 	serverException "gitlab.com/iotTracker/nerve/server/exception"
-	zx303ServerException "gitlab.com/iotTracker/nerve/server/zx303/exception"
 	zx303ServerMessage "gitlab.com/iotTracker/nerve/server/zx303/message"
+	zx303ServerMessageHandler "gitlab.com/iotTracker/nerve/server/zx303/message/handler"
+	zx303ServerMessageHeartbeatHandler "gitlab.com/iotTracker/nerve/server/zx303/message/handler/heartbeat"
+	zx303ServerMessageLoginHandler "gitlab.com/iotTracker/nerve/server/zx303/message/handler/login"
+	zx303ServerMessageProxyHandler "gitlab.com/iotTracker/nerve/server/zx303/message/handler/proxy"
+	zx303ServerException "gitlab.com/iotTracker/nerve/server/zx303/server/exception"
 	"io"
 	"net"
 	"strings"
 )
 
 type server struct {
-	Port      string
-	IPAddress string
+	Port           string
+	IPAddress      string
+	MessageHandler zx303ServerMessageHandler.Handler
 }
 
 func New() nerveServer.Server {
-	return &server{}
+	handlerMap := make(map[zx303ServerMessage.Type]zx303ServerMessageHandler.Handler)
+
+	// create and register handlers
+	handlerMap[zx303ServerMessage.Login] = zx303ServerMessageLoginHandler.New()
+	handlerMap[zx303ServerMessage.Heartbeat] = zx303ServerMessageHeartbeatHandler.New()
+
+	return &server{
+		MessageHandler: zx303ServerMessageProxyHandler.New(handlerMap),
+	}
 }
 
 func (s *server) Start(request *nerveServer.StartRequest) error {
@@ -53,12 +66,22 @@ func (s *server) handleConnection(c net.Conn) {
 		// it returns false when the scan stops by reaching the end
 		// of the input or an error
 		for scr.Scan() {
-			newMessage, err := zx303ServerMessage.New(string(scr.Bytes()))
+			// create message from data token
+			inMessage, err := zx303ServerMessage.New(string(scr.Bytes()))
 			if err != nil {
 				log.Warn(err.Error())
 				continue
 			}
-			fmt.Printf("%v\n", *newMessage)
+			// handle the message
+			outMessage, err := s.MessageHandler.Handle(inMessage)
+			if err != nil {
+				log.Warn(err.Error())
+				continue
+			}
+			// if a message needs to be returned, return it
+			if outMessage != nil {
+				// send the message back
+			}
 		}
 		// check to see if scanner stopped with an error
 		if scr.Err() != nil {

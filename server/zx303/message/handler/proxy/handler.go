@@ -1,17 +1,22 @@
-package login
+package proxy
 
 import (
-	"gitlab.com/iotTracker/nerve/log"
 	zx303ServerMessage "gitlab.com/iotTracker/nerve/server/zx303/message"
 	zx303ServerMessageException "gitlab.com/iotTracker/nerve/server/zx303/message/exception"
 	zx303ServerMessageHandler "gitlab.com/iotTracker/nerve/server/zx303/message/handler"
+	zx303ServerMessageHandlerException "gitlab.com/iotTracker/nerve/server/zx303/message/handler/exception"
 )
 
 type handler struct {
+	handlers map[zx303ServerMessage.Type]zx303ServerMessageHandler.Handler
 }
 
-func New() zx303ServerMessageHandler.Handler {
-	return &handler{}
+func New(
+	handlers map[zx303ServerMessage.Type]zx303ServerMessageHandler.Handler,
+) zx303ServerMessageHandler.Handler {
+	return &handler{
+		handlers: handlers,
+	}
 }
 
 func (h *handler) ValidateMessage(message *zx303ServerMessage.Message) error {
@@ -28,7 +33,12 @@ func (h *handler) Handle(message *zx303ServerMessage.Message) (*zx303ServerMessa
 		return nil, err
 	}
 
-	log.Info("Handling Login")
+	if h.handlers[message.Type] == nil {
+		return nil, zx303ServerMessageHandlerException.UnsupportedMessage{
+			Reasons: []string{"no handler for message"},
+			Message: *message,
+		}
+	}
 
-	return &zx303ServerMessage.Message{}, nil
+	return h.handlers[message.Type].Handle(message)
 }
