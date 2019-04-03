@@ -8,6 +8,7 @@ import (
 	nerveServer "gitlab.com/iotTracker/nerve/server"
 	serverException "gitlab.com/iotTracker/nerve/server/exception"
 	zx303ServerException "gitlab.com/iotTracker/nerve/server/zx303/exception"
+	zx303ServerMessage "gitlab.com/iotTracker/nerve/server/zx303/message"
 	"io"
 	"net"
 	"strings"
@@ -52,7 +53,12 @@ func (s *server) handleConnection(c net.Conn) {
 		// it returns false when the scan stops by reaching the end
 		// of the input or an error
 		for scr.Scan() {
-			fmt.Println(string(scr.Bytes()))
+			newMessage, err := zx303ServerMessage.New(string(scr.Bytes()))
+			if err != nil {
+				log.Warn(err.Error())
+				continue
+			}
+			fmt.Printf("%v\n", *newMessage)
 		}
 		// check to see if scanner stopped with an error
 		if scr.Err() != nil {

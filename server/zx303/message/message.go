@@ -1,6 +1,7 @@
 package message
 
 import (
+	"fmt"
 	messageException "gitlab.com/iotTracker/nerve/server/zx303/message/exception"
 	"strconv"
 )
@@ -14,7 +15,7 @@ type Message struct {
 func New(rawMessage string) (*Message, error) {
 	var newMessage Message
 	var err error
-
+	fmt.Println("process: ", rawMessage)
 	if len(rawMessage) < 4 {
 		return nil, messageException.Creation{Reasons: []string{"raw message string not long enough", rawMessage}}
 	}
@@ -25,10 +26,10 @@ func New(rawMessage string) (*Message, error) {
 	}
 
 	if len(rawMessage) == 4 {
-		newMessage.Type = rawMessage[2:]
+		newMessage.Type = Type(rawMessage[2:])
 		newMessage.Data = ""
 	} else {
-		newMessage.Type = rawMessage[2:4]
+		newMessage.Type = Type(rawMessage[2:4])
 		newMessage.Data = rawMessage[4:]
 	}
 	if !ValidType[newMessage.Type] {
@@ -36,4 +37,20 @@ func New(rawMessage string) (*Message, error) {
 	}
 
 	return &newMessage, nil
+}
+
+// 03 59 33 90 75 79 28 86
+// 03 59 33 90 75 79 28 86 48
+func (m Message) String() string {
+	switch m.Type {
+	case Login:
+		return fmt.Sprintf("Login: IMEI: %s, SoftV: %s", m.Data[:16], m.Data[16:])
+	case HeartBeat:
+		return fmt.Sprintf("Heartbeat - ")
+	case GPSPositioning:
+		return fmt.Sprintf("GPSPositioning - ")
+	default:
+
+	}
+	return ""
 }
