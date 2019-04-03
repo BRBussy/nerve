@@ -3,7 +3,7 @@ package main
 import (
 	"gitlab.com/iotTracker/nerve/log"
 	nerveServer "gitlab.com/iotTracker/nerve/server"
-	zx303Server "gitlab.com/iotTracker/nerve/server/zx303"
+	zx303Server "gitlab.com/iotTracker/nerve/server/zx303/server"
 	"os"
 	"os/signal"
 )

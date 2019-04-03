@@ -1,4 +1,4 @@
-package zx303
+package server
 
 import (
 	"bufio"
@@ -8,6 +8,7 @@ import (
 	nerveServer "gitlab.com/iotTracker/nerve/server"
 	serverException "gitlab.com/iotTracker/nerve/server/exception"
 	zx303ServerException "gitlab.com/iotTracker/nerve/server/zx303/exception"
+	"io"
 	"net"
 	"strings"
 )
@@ -42,8 +43,7 @@ func (s *server) Start(request *nerveServer.StartRequest) error {
 
 func (s *server) handleConnection(c net.Conn) {
 	log.Info(fmt.Sprintf("ZX303 serving %s", c.RemoteAddr().String()))
-
-	reader := bufio.NewReaderSize(c, 4096)
+	reader := bufio.NewReaderSize(c, 1024)
 	scr := bufio.NewScanner(reader)
 	scr.Split(splitFunc)
 	for {
@@ -66,6 +66,10 @@ const startMarker = "7878"
 const endMarker = "0d0a"
 
 func splitFunc(data []byte, atEOF bool) (advance int, token []byte, err error) {
+	if atEOF && len(data) == 0 {
+		return 0, nil, io.EOF
+	}
+
 	// convert input data to hex string
 	hexDataString := hex.EncodeToString(data)
 
