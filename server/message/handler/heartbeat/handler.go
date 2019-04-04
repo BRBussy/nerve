@@ -28,7 +28,7 @@ func (h *handler) Handle(message *serverMessage.Message) (*serverMessage.Message
 		return nil, err
 	}
 
-	log.Info("Handling Heartbeat")
+	log.Info("Heartbeat")
 
-	return &serverMessage.Message{}, nil
+	return nil, nil
 }

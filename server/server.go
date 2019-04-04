@@ -50,10 +50,13 @@ func (s *server) Start() error {
 }
 
 func (s *server) handleConnection(c net.Conn) {
-	log.Info(fmt.Sprintf(" serving %s", c.RemoteAddr().String()))
+	// TODO: use heart beat packets to determine when to drop the connection
+
+	log.Info(fmt.Sprintf("serving %s", c.RemoteAddr().String()))
 	reader := bufio.NewReaderSize(c, 1024)
 	scr := bufio.NewScanner(reader)
 	scr.Split(splitFunc)
+CommLoop:
 	for {
 		// scan advances the scanner to the next token
 		// which in this case is a complete message from the device
@@ -66,6 +69,9 @@ func (s *server) handleConnection(c net.Conn) {
 				log.Warn(err.Error())
 				continue
 			}
+			inMessageBytes, _ := inMessage.Bytes()
+			log.Info("IN -->", inMessageBytes)
+
 			// handle the message
 			outMessage, err := s.handleMessage(inMessage)
 			if err != nil {
@@ -75,14 +81,25 @@ func (s *server) handleConnection(c net.Conn) {
 			// if a message needs to be returned, return it
 			if outMessage != nil {
 				// send the message back
+				outMessageBytes, err := outMessage.Bytes()
+				if err != nil {
+					log.Warn("error converting message to bytes:" + err.Error())
+					break CommLoop
+				}
+				log.Info("OUT -->", outMessageBytes)
+				if _, err = c.Write(outMessageBytes); err != nil {
+					log.Warn("error sending message to device:" + err.Error())
+					break CommLoop
+				}
 			}
 		}
 		// check to see if scanner stopped with an error
 		if scr.Err() != nil {
 			log.Warn("scanning stopped with an error:", scr.Err().Error())
-			break
+			break CommLoop
 		}
 	}
+	log.Info(fmt.Sprintf("%s disconnected", c.RemoteAddr().String()))
 }
 
 func (s *server) handleMessage(message *serverMessage.Message) (*serverMessage.Message, error) {

@@ -3,12 +3,10 @@ package server
 import (
 	"encoding/hex"
 	serverException "gitlab.com/iotTracker/nerve/server/exception"
+	"gitlab.com/iotTracker/nerve/server/message"
 	"io"
 	"strings"
 )
-
-const startMarker = "7878"
-const endMarker = "0d0a"
 
 func splitFunc(data []byte, atEOF bool) (advance int, token []byte, err error) {
 	if atEOF && len(data) == 0 {
@@ -19,8 +17,8 @@ func splitFunc(data []byte, atEOF bool) (advance int, token []byte, err error) {
 	hexDataString := hex.EncodeToString(data)
 
 	// look for start and end of message markers
-	startIdx := strings.Index(hexDataString, startMarker)
-	endIdx := strings.Index(hexDataString, endMarker)
+	startIdx := strings.Index(hexDataString, message.StartMarker)
+	endIdx := strings.Index(hexDataString, message.EndMarker)
 
 	// if start could not be found return an error
 	if startIdx == -1 {
@@ -43,9 +41,9 @@ func splitFunc(data []byte, atEOF bool) (advance int, token []byte, err error) {
 	if endIdx == len(hexDataString)-1 {
 		messageHexStringBytes = []byte(hexDataString[startIdx:])
 	} else {
-		messageHexStringBytes = []byte(hexDataString[startIdx : endIdx+len(endMarker)])
+		messageHexStringBytes = []byte(hexDataString[startIdx : endIdx+len(message.EndMarker)])
 	}
-	tokenString := hexDataString[startIdx+len(startMarker) : endIdx]
+	tokenString := hexDataString[startIdx+len(message.StartMarker) : endIdx]
 
 	// convert message hex string bytes back to bytes
 	messageBytes := make([]byte, hex.DecodedLen(len(messageHexStringBytes)))
