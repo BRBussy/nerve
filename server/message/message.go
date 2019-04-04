@@ -2,7 +2,7 @@ package message
 
 import (
 	"fmt"
-	messageException "gitlab.com/iotTracker/nerve/server/messagetion"
+	messageException "gitlab.com/iotTracker/nerve/server/message/exception"
 	"strconv"
 )
 

@@ -79,7 +79,7 @@ func (s *server) handleConnection(c net.Conn) {
 		}
 		// check to see if scanner stopped with an error
 		if scr.Err() != nil {
-			fmt.Println("scanning stopped with an error:", scr.Err().Error())
+			log.Warn("scanning stopped with an error:", scr.Err().Error())
 			break
 		}
 	}
