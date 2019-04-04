@@ -2,21 +2,27 @@ package main
 
 import (
 	"gitlab.com/iotTracker/nerve/log"
-	nerveServer "gitlab.com/iotTracker/nerve/server"
-	zx303Server "gitlab.com/iotTracker/nerve/server/zx303/server"
+	"gitlab.com/iotTracker/nerve/server"
+	ServerMessage "gitlab.com/iotTracker/nerve/server/message"
+	ServerMessageHeartbeatHandler "gitlab.com/iotTracker/nerve/server/message/handler/heartbeat"
+	ServerMessageLoginHandler "gitlab.com/iotTracker/nerve/server/message/handler/login"
 	"os"
 	"os/signal"
 )
 
 func main() {
-	// set up zx303 server
-	ZX303Server := zx303Server.New()
+	// set up  server
+	Server := server.New(
+		"5021",
+		"0.0.0.0",
+	)
+
+	Server.RegisterMessageHandler(ServerMessage.Login, ServerMessageLoginHandler.New())
+	Server.RegisterMessageHandler(ServerMessage.Heartbeat, ServerMessageHeartbeatHandler.New())
+
 	go func() {
-		err := ZX303Server.Start(&nerveServer.StartRequest{
-			Port:      "5021",
-			IPAddress: "0.0.0.0",
-		})
-		log.Fatal("zx303 server stopped: ", err.Error())
+		err := Server.Start()
+		log.Fatal(" server stopped: ", err.Error())
 	}()
 
 	//Wait for interrupt signal

@@ -2,13 +2,13 @@ package exception
 
 import (
 	"fmt"
-	zx303ServerMessage "gitlab.com/iotTracker/nerve/server/zx303/message"
+	ServerMessage "gitlab.com/iotTracker/nerve/server/message"
 	"strings"
 )
 
 type UnsupportedMessage struct {
 	Reasons []string
-	Message zx303ServerMessage.Message
+	Message ServerMessage.Message
 }
 
 func (e UnsupportedMessage) Error() string {
