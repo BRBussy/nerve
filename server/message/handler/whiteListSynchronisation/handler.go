@@ -1,13 +1,10 @@
 package whiteListSynchronisation
 
 import (
-	"fmt"
-	hexPadding "gitlab.com/iotTracker/nerve/hex/padding"
 	"gitlab.com/iotTracker/nerve/log"
 	serverMessage "gitlab.com/iotTracker/nerve/server/message"
 	serverMessageHandler "gitlab.com/iotTracker/nerve/server/message/handler"
 	serverMessageHandlerException "gitlab.com/iotTracker/nerve/server/message/handler/exception"
-	"time"
 )
 
 type handler struct {
@@ -33,18 +30,9 @@ func (h *handler) Handle(request *serverMessageHandler.HandleRequest) (*serverMe
 
 	log.Info("White List Synchronisation")
 
-	timeNow := time.Now().UTC()
 	return &serverMessageHandler.HandleResponse{Messages: []serverMessage.Message{{
 		Type:       request.Message.Type,
-		DataLength: 7,
-		Data: fmt.Sprintf("%s%s%s%s%s%s",
-			hexPadding.Pad(fmt.Sprintf("%x", int(timeNow.Year())), 4),
-			hexPadding.Pad(fmt.Sprintf("%x", int(timeNow.Month())), 2),
-			hexPadding.Pad(fmt.Sprintf("%x", int(timeNow.Day())), 2),
-			hexPadding.Pad(fmt.Sprintf("%x", int(timeNow.Hour())), 2),
-			hexPadding.Pad(fmt.Sprintf("%x", int(timeNow.Minute())), 2),
-			hexPadding.Pad(fmt.Sprintf("%x", int(timeNow.Second())), 2),
-		),
+		DataLength: 0,
 	}},
 	}, nil
 }

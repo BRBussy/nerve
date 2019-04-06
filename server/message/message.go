@@ -100,6 +100,14 @@ func (m Message) String() string {
 		return fmt.Sprintf("[type: Device Setup, Data: %s]", m.Data)
 	case WhiteListSynchronisation:
 		return fmt.Sprintf("[type: White List Synchronisation, Data: %s]", m.Data)
+	case TurnOnLightSensorSwitch:
+		return fmt.Sprintf("[type: Turn On Light Sensor Switch, Data: %s]", m.Data)
+	case SetServerIPAndPort:
+		return fmt.Sprintf("[type: Set Server IP and Port, Data: %s]", m.Data)
+	case SetRecoveryPassword:
+		return fmt.Sprintf("[type: Set Recovery Password, Data: %s]", m.Data)
+	case WIFIPosition:
+		return fmt.Sprintf("[type: WIFI Position, Data: %s]", m.Data)
 
 	default:
 		return fmt.Sprintf("[type: unknown, Data: %s]", m.Data)
