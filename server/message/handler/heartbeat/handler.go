@@ -2,7 +2,6 @@ package heartbeat
 
 import (
 	"gitlab.com/iotTracker/nerve/log"
-	serverMessage "gitlab.com/iotTracker/nerve/server/message"
 	serverMessageException "gitlab.com/iotTracker/nerve/server/message/exception"
 	serverMessageHandler "gitlab.com/iotTracker/nerve/server/message/handler"
 )
@@ -14,12 +13,8 @@ func New() serverMessageHandler.Handler {
 	return &handler{}
 }
 
-func (h *handler) ValidateHandleRequest(request *handler.HandleRequest *serverMessage.Message) error {
+func (h *handler) ValidateHandleRequest(request *serverMessageHandler.HandleRequest) error {
 	reasonsInvalid := make([]string, 0)
-
-	if err := message.IsValid(); err != nil {
-		reasonsInvalid = append(reasonsInvalid, "invalid message: "+err.Error())
-	}
 
 	if len(reasonsInvalid) > 0 {
 		return serverMessageException.Invalid{Reasons: reasonsInvalid}
@@ -27,8 +22,8 @@ func (h *handler) ValidateHandleRequest(request *handler.HandleRequest *serverMe
 	return nil
 }
 
-func (h *handler) Handle(message *serverMessage.Message) (*serverMessage.Message, error) {
-	if err := h.ValidateHandleRequest(request *handler.HandleRequest); err != nil {
+func (h *handler) Handle(request *serverMessageHandler.HandleRequest) (*serverMessageHandler.HandleResponse, error) {
+	if err := h.ValidateHandleRequest(request); err != nil {
 		return nil, err
 	}
 
