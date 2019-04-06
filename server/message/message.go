@@ -74,6 +74,24 @@ func (m Message) String() string {
 		return fmt.Sprintf("[type: Offline WIFI Data, Data: %s]", m.Data)
 	case TimeSynchronisation:
 		return fmt.Sprintf("[type: Time Syncronisation, Data: %s]", m.Data)
+	case SetRemoteListeningCellNumber:
+		return fmt.Sprintf("[type: Set Remote Listening Number, Data: %s]", m.Data)
+	case SetSOSNumber:
+		return fmt.Sprintf("[type: Set SOS Number, Data: %s]", m.Data)
+	case SetDadNumber:
+		return fmt.Sprintf("[type: Set Dad Number, Data: %s]", m.Data)
+	case SetMomNumber:
+		return fmt.Sprintf("[type: Set Mom Number, Data: %s]", m.Data)
+	case StopDataUpload:
+		return fmt.Sprintf("[type: Stop Data Upload, Data: %s]", m.Data)
+	case SetGPSOffTime:
+		return fmt.Sprintf("[type: Set GPS Off Time, Data: %s]", m.Data)
+	case SetDoNotDisturb:
+		return fmt.Sprintf("[type: Set Do Not Disturb, Data: %s]", m.Data)
+	case RestartDevice:
+		return fmt.Sprintf("[type: Restart Device, Data: %s]", m.Data)
+	case FindDevice:
+		return fmt.Sprintf("[type: Find Device, Data: %s]", m.Data)
 
 	default:
 		return fmt.Sprintf("[type: unknown, Data: %s]", m.Data)
