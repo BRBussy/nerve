@@ -67,9 +67,15 @@ func (m Message) String() string {
 	case Hibernation:
 		return fmt.Sprintf("[type: Device Hibernation, Data: %s]", m.Data)
 	case FactorySettingsRestored:
-		return fmt.Sprintf("[type : Factory Settings Data: %s]", m.Data)
-	default:
+		return fmt.Sprintf("[type : Factory Settings, Data: %s]", m.Data)
+	case WhiteListTotal:
+		return fmt.Sprintf("[type : White List Total, Data: %s]", m.Data)
+	case OfflineWIFIData:
+		return fmt.Sprintf("[type: Offline WIFI Data, Data: %s]", m.Data)
+	case TimeSynchronisation:
+		return fmt.Sprintf("[type: Time Syncronisation, Data: %s]", m.Data)
 
+	default:
+		return fmt.Sprintf("[type: unknown, Data: %s]", m.Data)
 	}
-	return ""
 }

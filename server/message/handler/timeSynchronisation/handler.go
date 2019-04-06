@@ -1,14 +1,14 @@
-package login
+package timeSynchronisation
 
 import (
+	"fmt"
+	hexPadding "gitlab.com/iotTracker/nerve/hex/padding"
 	"gitlab.com/iotTracker/nerve/log"
 	serverMessage "gitlab.com/iotTracker/nerve/server/message"
 	serverMessageHandler "gitlab.com/iotTracker/nerve/server/message/handler"
 	serverMessageHandlerException "gitlab.com/iotTracker/nerve/server/message/handler/exception"
+	"time"
 )
-
-const SuccessData = ""
-const FailureData = "44"
 
 type handler struct {
 }
@@ -19,10 +19,6 @@ func New() serverMessageHandler.Handler {
 
 func (h *handler) ValidateHandleRequest(request *serverMessageHandler.HandleRequest) error {
 	reasonsInvalid := make([]string, 0)
-
-	if len(request.Message.Data) < 16 {
-		reasonsInvalid = append(reasonsInvalid, "data not long enough")
-	}
 
 	if len(reasonsInvalid) > 0 {
 		return serverMessageHandlerException.MessageInvalid{Reasons: reasonsInvalid, Message: request.Message}
@@ -35,19 +31,20 @@ func (h *handler) Handle(request *serverMessageHandler.HandleRequest) (*serverMe
 		return nil, err
 	}
 
-	log.Info("Log in Device with IMEI: ", request.Message.Data[:16])
+	log.Info("Time Synchronisation")
 
-	outMessage := serverMessage.Message{
-		Type:       serverMessage.Login,
-		Data:       FailureData,
-		DataLength: 1,
-	}
-	// determine if device is allowed to log in
-	if true {
-		outMessage.Data = SuccessData
-	}
-
-	return &serverMessageHandler.HandleResponse{
-		Messages: []serverMessage.Message{outMessage},
+	timeNow := time.Now().UTC()
+	return &serverMessageHandler.HandleResponse{Messages: []serverMessage.Message{{
+		Type:       request.Message.Type,
+		DataLength: 7,
+		Data: fmt.Sprintf("%s%s%s%s%s%s",
+			hexPadding.Pad(fmt.Sprintf("%x", int(timeNow.Year())), 4),
+			hexPadding.Pad(fmt.Sprintf("%x", int(timeNow.Month())), 2),
+			hexPadding.Pad(fmt.Sprintf("%x", int(timeNow.Day())), 2),
+			hexPadding.Pad(fmt.Sprintf("%x", int(timeNow.Hour())), 2),
+			hexPadding.Pad(fmt.Sprintf("%x", int(timeNow.Minute())), 2),
+			hexPadding.Pad(fmt.Sprintf("%x", int(timeNow.Second())), 2),
+		),
+	}},
 	}, nil
 }

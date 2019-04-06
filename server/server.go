@@ -93,7 +93,7 @@ CommLoop:
 
 func (s *server) handleMessage(message *serverMessage.Message) (*serverMessageHandler.HandleResponse, error) {
 	if s.MessageHandlers[message.Type] == nil {
-		return nil, serverException.NoHandler{MessageType: message.Type}
+		return nil, serverException.NoHandler{Message: *message}
 	}
 
 	return s.MessageHandlers[message.Type].Handle(&serverMessageHandler.HandleRequest{

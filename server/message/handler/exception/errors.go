@@ -2,13 +2,13 @@ package exception
 
 import (
 	"fmt"
-	ServerMessage "gitlab.com/iotTracker/nerve/server/message"
+	serverMessage "gitlab.com/iotTracker/nerve/server/message"
 	"strings"
 )
 
 type UnsupportedMessage struct {
 	Reasons []string
-	Message ServerMessage.Message
+	Message serverMessage.Message
 }
 
 func (e UnsupportedMessage) Error() string {
@@ -21,4 +21,13 @@ type Handling struct {
 
 func (e Handling) Error() string {
 	return "handling error: " + strings.Join(e.Reasons, "; ")
+}
+
+type MessageInvalid struct {
+	Message serverMessage.Message
+	Reasons []string
+}
+
+func (e MessageInvalid) Error() string {
+	return fmt.Sprintf("message invalid: %s, %s", e.Message, strings.Join(e.Reasons, "; "))
 }

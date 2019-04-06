@@ -1,6 +1,8 @@
 package exception
 
-import "strings"
+import (
+	"strings"
+)
 
 type Creation struct {
 	Reasons []string
@@ -8,12 +10,4 @@ type Creation struct {
 
 func (e Creation) Error() string {
 	return "message creation error: " + strings.Join(e.Reasons, "; ")
-}
-
-type Invalid struct {
-	Reasons []string
-}
-
-func (e Invalid) Error() string {
-	return "message invalid: " + strings.Join(e.Reasons, "; ")
 }

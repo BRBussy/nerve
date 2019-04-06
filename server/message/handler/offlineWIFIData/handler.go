@@ -3,8 +3,8 @@ package offlineWIFIData
 import (
 	"gitlab.com/iotTracker/nerve/log"
 	serverMessage "gitlab.com/iotTracker/nerve/server/message"
-	serverMessageException "gitlab.com/iotTracker/nerve/server/message/exception"
 	serverMessageHandler "gitlab.com/iotTracker/nerve/server/message/handler"
+	serverMessageHandlerException "gitlab.com/iotTracker/nerve/server/message/handler/exception"
 )
 
 type handler struct {
@@ -22,7 +22,7 @@ func (h *handler) ValidateHandleRequest(request *serverMessageHandler.HandleRequ
 	}
 
 	if len(reasonsInvalid) > 0 {
-		return serverMessageException.Invalid{Reasons: reasonsInvalid}
+		return serverMessageHandlerException.MessageInvalid{Reasons: reasonsInvalid, Message: request.Message}
 	}
 	return nil
 }

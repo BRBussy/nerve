@@ -40,11 +40,11 @@ func (e DecodingError) Error() string {
 }
 
 type NoHandler struct {
-	MessageType serverMessage.Type
+	Message serverMessage.Message
 }
 
 func (e NoHandler) Error() string {
-	return "no handler for given message type: " + e.MessageType.String()
+	return fmt.Sprintf("no handler for given message %s", e.Message)
 }
 
 type MessageConversion struct {
