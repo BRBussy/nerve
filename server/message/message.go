@@ -66,6 +66,8 @@ func (m Message) String() string {
 		return fmt.Sprintf("[type: Status, Data: %s]", m.Data)
 	case Hibernation:
 		return fmt.Sprintf("[type: Device Hibernation, Data: %s]", m.Data)
+	case FactorySettingsRestored:
+		return fmt.Sprintf("[type : Factory Settings Data: %s]", m.Data)
 	default:
 
 	}
