@@ -64,6 +64,8 @@ func (m Message) String() string {
 		return fmt.Sprintf("[type: GPS Position, Data: %s]", m.Data)
 	case Status:
 		return fmt.Sprintf("[type: Status, Data: %s]", m.Data)
+	case Hibernation:
+		return fmt.Sprintf("[type: Device Hibernation, Data: %s]", m.Data)
 	default:
 
 	}

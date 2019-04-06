@@ -4,10 +4,11 @@ import (
 	"gitlab.com/iotTracker/nerve/log"
 	"gitlab.com/iotTracker/nerve/server"
 	ServerMessage "gitlab.com/iotTracker/nerve/server/message"
-	ServerMessageGPSPositionHandler "gitlab.com/iotTracker/nerve/server/message/handler/gpsPosition"
-	ServerMessageHeartbeatHandler "gitlab.com/iotTracker/nerve/server/message/handler/heartbeat"
-	ServerMessageLoginHandler "gitlab.com/iotTracker/nerve/server/message/handler/login"
-	ServerMessageStatusHandler "gitlab.com/iotTracker/nerve/server/message/handler/status"
+	ServerGPSPositionMessageHandler "gitlab.com/iotTracker/nerve/server/message/handler/gpsPosition"
+	ServerHeartbeatMessageHandler "gitlab.com/iotTracker/nerve/server/message/handler/heartbeat"
+	ServerHibernationMessageHandler "gitlab.com/iotTracker/nerve/server/message/handler/hibernation"
+	ServerLoginMessageHandler "gitlab.com/iotTracker/nerve/server/message/handler/login"
+	ServerStatusMessageHandler "gitlab.com/iotTracker/nerve/server/message/handler/status"
 	"os"
 	"os/signal"
 )
@@ -19,11 +20,12 @@ func main() {
 		"0.0.0.0",
 	)
 
-	Server.RegisterMessageHandler(ServerMessage.Login, ServerMessageLoginHandler.New())
-	Server.RegisterMessageHandler(ServerMessage.Heartbeat, ServerMessageHeartbeatHandler.New())
-	Server.RegisterMessageHandler(ServerMessage.GPSPosition, ServerMessageGPSPositionHandler.New())
-	Server.RegisterMessageHandler(ServerMessage.GPSPosition2, ServerMessageGPSPositionHandler.New())
-	Server.RegisterMessageHandler(ServerMessage.Status, ServerMessageStatusHandler.New())
+	Server.RegisterMessageHandler(ServerMessage.Login, ServerLoginMessageHandler.New())
+	Server.RegisterMessageHandler(ServerMessage.Heartbeat, ServerHeartbeatMessageHandler.New())
+	Server.RegisterMessageHandler(ServerMessage.GPSPosition, ServerGPSPositionMessageHandler.New())
+	Server.RegisterMessageHandler(ServerMessage.GPSPosition2, ServerGPSPositionMessageHandler.New())
+	Server.RegisterMessageHandler(ServerMessage.Status, ServerStatusMessageHandler.New())
+	Server.RegisterMessageHandler(ServerMessage.Hibernation, ServerHibernationMessageHandler.New())
 
 	go func() {
 		err := Server.Start()
