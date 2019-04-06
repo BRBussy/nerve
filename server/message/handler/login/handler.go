@@ -7,7 +7,7 @@ import (
 	serverMessageHandler "gitlab.com/iotTracker/nerve/server/message/handler"
 )
 
-const SuccessData = "01"
+const SuccessData = ""
 const FailureData = "44"
 
 type handler struct {
@@ -19,6 +19,10 @@ func New() serverMessageHandler.Handler {
 
 func (h *handler) ValidateHandleRequest(request *serverMessageHandler.HandleRequest) error {
 	reasonsInvalid := make([]string, 0)
+
+	if len(request.Message.Data) < 16 {
+		reasonsInvalid = append(reasonsInvalid, "data not long enough")
+	}
 
 	if len(reasonsInvalid) > 0 {
 		return serverMessageException.Invalid{Reasons: reasonsInvalid}
@@ -36,7 +40,7 @@ func (h *handler) Handle(request *serverMessageHandler.HandleRequest) (*serverMe
 	outMessage := serverMessage.Message{
 		Type:       serverMessage.Login,
 		Data:       FailureData,
-		DataLength: "01",
+		DataLength: 1,
 	}
 	// determine if device is allowed to log in
 	if true {

@@ -9,6 +9,7 @@ func (t Type) String() string {
 const Login Type = "01"
 const Heartbeat Type = "08"
 const GPSPosition Type = "10"
+const GPSPosition2 Type = "11"
 const Status Type = "13"
 const DeviceHibernation Type = "14"
 const RestoreFactorySettings Type = "15"

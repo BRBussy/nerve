@@ -14,3 +14,11 @@ type UnsupportedMessage struct {
 func (e UnsupportedMessage) Error() string {
 	return fmt.Sprintf("unsupported message:\n%s\n%s", e.Message.String(), strings.Join(e.Reasons, "; "))
 }
+
+type Handling struct {
+	Reasons []string
+}
+
+func (e Handling) Error() string {
+	return "handling error: " + strings.Join(e.Reasons, "; ")
+}
