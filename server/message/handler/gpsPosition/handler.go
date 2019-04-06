@@ -3,6 +3,7 @@ package gpsPosition
 import (
 	"fmt"
 	"gitlab.com/iotTracker/nerve/log"
+	serverMessage "gitlab.com/iotTracker/nerve/server/message"
 	serverMessageException "gitlab.com/iotTracker/nerve/server/message/exception"
 	serverMessageHandler "gitlab.com/iotTracker/nerve/server/message/handler"
 	serverMessageHandlerException "gitlab.com/iotTracker/nerve/server/message/handler/exception"
@@ -126,5 +127,12 @@ func (h *handler) Handle(request *serverMessageHandler.HandleRequest) (*serverMe
 		speed,
 		heading,
 	))
-	return &serverMessageHandler.HandleResponse{}, nil
+
+	return &serverMessageHandler.HandleResponse{
+		Messages: []serverMessage.Message{{
+			Type:       request.Message.Type,
+			DataLength: 0,
+			Data:       request.Message.Data[:12],
+		}},
+	}, nil
 }
