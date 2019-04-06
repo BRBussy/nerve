@@ -92,6 +92,12 @@ func (m Message) String() string {
 		return fmt.Sprintf("[type: Restart Device, Data: %s]", m.Data)
 	case FindDevice:
 		return fmt.Sprintf("[type: Find Device, Data: %s]", m.Data)
+	case SetAlarmClock:
+		return fmt.Sprintf("[type: Set Alarm Clock, Data: %s]", m.Data)
+	case TurnOffAlarmClock:
+		return fmt.Sprintf("[type: Turn Off Alarm Clock, Data: %s]", m.Data)
+	case DeviceSetup:
+		return fmt.Sprintf("[type: Device Setup, Data: %s]", m.Data)
 
 	default:
 		return fmt.Sprintf("[type: unknown, Data: %s]", m.Data)
