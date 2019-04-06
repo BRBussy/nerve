@@ -72,24 +72,16 @@ CommLoop:
 			log.Info("IN -->", inMessageBytes)
 
 			// handle the message
-			outMessage, err := s.handleMessage(inMessage)
+			response, err := s.handleMessage(inMessage)
 			if err != nil {
 				log.Warn(err.Error())
 				continue
 			}
-			// if a message needs to be returned, return it
-			if outMessage != nil {
-				// send the message back
-				outMessageBytes, err := outMessage.Bytes()
-				if err != nil {
-					log.Warn("error converting message to bytes:" + err.Error())
-					break CommLoop
-				}
-				log.Info("OUT -->", outMessageBytes)
-				if _, err = c.Write(outMessageBytes); err != nil {
-					log.Warn("error sending message to device:" + err.Error())
-					break CommLoop
-				}
+
+			// handle the response
+			if err := s.handleResponse(response, c); err != nil {
+				log.Warn("error handling message handler response", err.Error())
+				break CommLoop
 			}
 		}
 		// check to see if scanner stopped with an error
@@ -101,10 +93,30 @@ CommLoop:
 	log.Info(fmt.Sprintf("%s disconnected", c.RemoteAddr().String()))
 }
 
-func (s *server) handleMessage(message *serverMessage.Message) (*serverMessage.Message, error) {
+func (s *server) handleMessage(message *serverMessage.Message) (*serverMessageHandler.HandleResponse, error) {
 	if s.MessageHandlers[message.Type] == nil {
 		return nil, serverException.NoHandler{MessageType: message.Type}
 	}
 
-	return s.MessageHandlers[message.Type].Handle(message)
+	return s.MessageHandlers[message.Type].Handle(&serverMessageHandler.HandleRequest{
+		Message: *message,
+	})
+}
+
+func (s *server) handleResponse(response *serverMessageHandler.HandleResponse, c net.Conn) error {
+
+	// if a message needs to be returned, return it
+	for msgIdx := range response.Messages {
+		// send the message back
+		outMessageBytes, err := response.Messages[msgIdx].Bytes()
+		if err != nil {
+			return serverException.MessageConversion{Reasons: []string{"message to bytes", err.Error()}}
+		}
+		log.Info("OUT -->", outMessageBytes)
+		if _, err = c.Write(outMessageBytes); err != nil {
+			return serverException.SendingMessage{Message: response.Messages[msgIdx], Reasons: []string{err.Error()}}
+		}
+	}
+
+	return nil
 }

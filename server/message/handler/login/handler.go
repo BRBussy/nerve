@@ -43,5 +43,7 @@ func (h *handler) Handle(request *serverMessageHandler.HandleRequest) (*serverMe
 		outMessage.Data = SuccessData
 	}
 
-	return &outMessage, nil
+	return &serverMessageHandler.HandleResponse{
+		Messages: []serverMessage.Message{outMessage},
+	}, nil
 }

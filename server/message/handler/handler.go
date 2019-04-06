@@ -14,5 +14,5 @@ type HandleRequest struct {
 }
 
 type HandleResponse struct {
-	Message ServerMessage.Message
+	Messages []ServerMessage.Message
 }
