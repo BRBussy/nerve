@@ -51,7 +51,6 @@ func (s *server) Start() error {
 
 func (s *server) handleConnection(c net.Conn) {
 	// TODO: use heart beat packets to determine when to drop the connection
-
 	log.Info(fmt.Sprintf("serving %s", c.RemoteAddr().String()))
 	reader := bufio.NewReaderSize(c, 1024)
 	scr := bufio.NewScanner(reader)

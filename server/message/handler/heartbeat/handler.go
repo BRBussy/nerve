@@ -14,8 +14,12 @@ func New() serverMessageHandler.Handler {
 	return &handler{}
 }
 
-func (h *handler) ValidateMessage(message *serverMessage.Message) error {
+func (h *handler) ValidateHandleRequest(request *handler.HandleRequest *serverMessage.Message) error {
 	reasonsInvalid := make([]string, 0)
+
+	if err := message.IsValid(); err != nil {
+		reasonsInvalid = append(reasonsInvalid, "invalid message: "+err.Error())
+	}
 
 	if len(reasonsInvalid) > 0 {
 		return serverMessageException.Invalid{Reasons: reasonsInvalid}
@@ -24,7 +28,7 @@ func (h *handler) ValidateMessage(message *serverMessage.Message) error {
 }
 
 func (h *handler) Handle(message *serverMessage.Message) (*serverMessage.Message, error) {
-	if err := h.ValidateMessage(message); err != nil {
+	if err := h.ValidateHandleRequest(request *handler.HandleRequest); err != nil {
 		return nil, err
 	}
 

@@ -5,5 +5,14 @@ import (
 )
 
 type Handler interface {
-	Handle(message *ServerMessage.Message) (*ServerMessage.Message, error)
+	Handle(request *HandleRequest) (*HandleResponse, error)
+}
+
+type HandleRequest struct {
+	Message  ServerMessage.Message
+	LoggedIn bool
+}
+
+type HandleResponse struct {
+	Message ServerMessage.Message
 }

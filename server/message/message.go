@@ -30,9 +30,6 @@ func New(rawMessage string) (*Message, error) {
 		newMessage.Type = Type(rawMessage[2:4])
 		newMessage.Data = rawMessage[4:]
 	}
-	if !ValidType[newMessage.Type] {
-		return nil, messageException.Creation{Reasons: []string{"invalid type", newMessage.Type.String()}}
-	}
 
 	return &newMessage, nil
 }
@@ -51,11 +48,11 @@ func (m Message) Bytes() ([]byte, error) {
 func (m Message) String() string {
 	switch m.Type {
 	case Login:
-		return fmt.Sprintf("Login: IMEI: %s, SoftV: %s", m.Data[:16], m.Data[16:])
+		return fmt.Sprintf("[type: Login, Data: %s]", m.Data)
 	case Heartbeat:
-		return fmt.Sprintf("Heartbeat - ")
-	case GPSPositioning:
-		return fmt.Sprintf("GPSPositioning - ")
+		return fmt.Sprintf("[type: Login, Data: %s]", m.Data)
+	case GPSPosition:
+		return fmt.Sprintf("[type: GPSPositioning, Data: %s]", m.Data)
 	default:
 
 	}
