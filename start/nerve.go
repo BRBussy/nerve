@@ -9,6 +9,7 @@ import (
 	ServerHeartbeatMessageHandler "gitlab.com/iotTracker/nerve/server/message/handler/heartbeat"
 	ServerHibernationMessageHandler "gitlab.com/iotTracker/nerve/server/message/handler/hibernation"
 	ServerLoginMessageHandler "gitlab.com/iotTracker/nerve/server/message/handler/login"
+	ServerOfflineWIFIDataMessageHandler "gitlab.com/iotTracker/nerve/server/message/handler/offlineWIFIData"
 	ServerStatusMessageHandler "gitlab.com/iotTracker/nerve/server/message/handler/status"
 	"os"
 	"os/signal"
@@ -28,6 +29,7 @@ func main() {
 	Server.RegisterMessageHandler(ServerMessage.Status, ServerStatusMessageHandler.New())
 	Server.RegisterMessageHandler(ServerMessage.Hibernation, ServerHibernationMessageHandler.New())
 	Server.RegisterMessageHandler(ServerMessage.FactorySettingsRestored, ServerFactorySettingsRestoredMessageHandler.New())
+	Server.RegisterMessageHandler(ServerMessage.OfflineWIFIData, ServerOfflineWIFIDataMessageHandler.New())
 
 	go func() {
 		err := Server.Start()
