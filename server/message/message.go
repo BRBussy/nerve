@@ -108,6 +108,14 @@ func (m Message) String() string {
 		return fmt.Sprintf("[type: Set Recovery Password, Data: %s]", m.Data)
 	case WIFIPosition:
 		return fmt.Sprintf("[type: WIFI Position, Data: %s]", m.Data)
+	case ManualPosition:
+		return fmt.Sprintf("[type: Manual Position, Data: %s]", m.Data)
+	case ChargeComplete:
+		return fmt.Sprintf("[type: Charge Complete, Data: %s]", m.Data)
+	case ChargerConnected:
+		return fmt.Sprintf("[type: Charger Connected, Data: %s]", m.Data)
+	case ChargerDisconnected:
+		return fmt.Sprintf("[type: Charger Disconnected, Data: %s]", m.Data)
 
 	default:
 		return fmt.Sprintf("[type: unknown, Data: %s]", m.Data)

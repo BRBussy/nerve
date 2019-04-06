@@ -4,6 +4,9 @@ import (
 	"gitlab.com/iotTracker/nerve/log"
 	"gitlab.com/iotTracker/nerve/server"
 	ServerMessage "gitlab.com/iotTracker/nerve/server/message"
+	ServerChargeCompleteMessageHandler "gitlab.com/iotTracker/nerve/server/message/handler/chargeComplete"
+	ServerChargerConnectedMessageHandler "gitlab.com/iotTracker/nerve/server/message/handler/chargerConnected"
+	ServerChargerDisconnectedMessageHandler "gitlab.com/iotTracker/nerve/server/message/handler/chargerDisconnected"
 	ServerDeviceSetupMessageHandler "gitlab.com/iotTracker/nerve/server/message/handler/deviceSetup"
 	ServerFactorySettingsRestoredMessageHandler "gitlab.com/iotTracker/nerve/server/message/handler/factorySettingsRestored"
 	ServerGPSPositionMessageHandler "gitlab.com/iotTracker/nerve/server/message/handler/gpsPosition"
@@ -14,6 +17,7 @@ import (
 	ServerStatusMessageHandler "gitlab.com/iotTracker/nerve/server/message/handler/status"
 	ServerTimeSynchronisationMessageHandler "gitlab.com/iotTracker/nerve/server/message/handler/timeSynchronisation"
 	ServerWhiteListSynchronisationMessageHandler "gitlab.com/iotTracker/nerve/server/message/handler/whiteListSynchronisation"
+	ServerWIFIPositionMessageHandler "gitlab.com/iotTracker/nerve/server/message/handler/wifiPosition"
 	"os"
 	"os/signal"
 )
@@ -36,6 +40,10 @@ func main() {
 	Server.RegisterMessageHandler(ServerMessage.TimeSynchronisation, ServerTimeSynchronisationMessageHandler.New())
 	Server.RegisterMessageHandler(ServerMessage.DeviceSetup, ServerDeviceSetupMessageHandler.New())
 	Server.RegisterMessageHandler(ServerMessage.WhiteListSynchronisation, ServerWhiteListSynchronisationMessageHandler.New())
+	Server.RegisterMessageHandler(ServerMessage.WIFIPosition, ServerWIFIPositionMessageHandler.New())
+	Server.RegisterMessageHandler(ServerMessage.ChargeComplete, ServerChargeCompleteMessageHandler.New())
+	Server.RegisterMessageHandler(ServerMessage.ChargerConnected, ServerChargerConnectedMessageHandler.New())
+	Server.RegisterMessageHandler(ServerMessage.ChargerDisconnected, ServerChargerDisconnectedMessageHandler.New())
 
 	go func() {
 		err := Server.Start()
