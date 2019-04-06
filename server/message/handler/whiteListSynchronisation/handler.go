@@ -1,4 +1,4 @@
-package deviceSetup
+package whiteListSynchronisation
 
 import (
 	"fmt"
@@ -7,7 +7,7 @@ import (
 	serverMessage "gitlab.com/iotTracker/nerve/server/message"
 	serverMessageHandler "gitlab.com/iotTracker/nerve/server/message/handler"
 	serverMessageHandlerException "gitlab.com/iotTracker/nerve/server/message/handler/exception"
-	"strconv"
+	"time"
 )
 
 type handler struct {
@@ -31,31 +31,19 @@ func (h *handler) Handle(request *serverMessageHandler.HandleRequest) (*serverMe
 		return nil, err
 	}
 
-	log.Info("Device Setup")
+	log.Info("White List Synchronisation")
 
-	uploadInterval := "0060"
-	deviceSwitchBitString := fmt.Sprintf("%d%d%d%d%d%d%d%d",
-		0, // n/a
-		0, // n/a
-		0, // sensor switch
-		0, // light sense
-		0, // bluetooth
-		0, // vibration alarm
-		0, // step
-		1, // gps
-	)
-	deviceSwitchInt, err := strconv.ParseInt(deviceSwitchBitString, 2, 9)
-	if err != nil {
-		return nil, serverMessageHandlerException.Handling{Reasons: []string{"device bit string to int parse", err.Error()}}
-	}
-	deviceSwitchHexString := hexPadding.Pad(fmt.Sprintf("%x", deviceSwitchInt), 2)
-
+	timeNow := time.Now().UTC()
 	return &serverMessageHandler.HandleResponse{Messages: []serverMessage.Message{{
 		Type:       request.Message.Type,
-		DataLength: 31,
-		Data: fmt.Sprintf("%s%s0000000000000000000000000000000000000000000000003B3B3B",
-			uploadInterval,
-			deviceSwitchHexString,
+		DataLength: 7,
+		Data: fmt.Sprintf("%s%s%s%s%s%s",
+			hexPadding.Pad(fmt.Sprintf("%x", int(timeNow.Year())), 4),
+			hexPadding.Pad(fmt.Sprintf("%x", int(timeNow.Month())), 2),
+			hexPadding.Pad(fmt.Sprintf("%x", int(timeNow.Day())), 2),
+			hexPadding.Pad(fmt.Sprintf("%x", int(timeNow.Hour())), 2),
+			hexPadding.Pad(fmt.Sprintf("%x", int(timeNow.Minute())), 2),
+			hexPadding.Pad(fmt.Sprintf("%x", int(timeNow.Second())), 2),
 		),
 	}},
 	}, nil

@@ -98,6 +98,8 @@ func (m Message) String() string {
 		return fmt.Sprintf("[type: Turn Off Alarm Clock, Data: %s]", m.Data)
 	case DeviceSetup:
 		return fmt.Sprintf("[type: Device Setup, Data: %s]", m.Data)
+	case WhiteListSynchronisation:
+		return fmt.Sprintf("[type: White List Synchronisation, Data: %s]", m.Data)
 
 	default:
 		return fmt.Sprintf("[type: unknown, Data: %s]", m.Data)
