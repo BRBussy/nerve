@@ -7,6 +7,7 @@ import (
 	ServerMessageGPSPositionHandler "gitlab.com/iotTracker/nerve/server/message/handler/gpsPosition"
 	ServerMessageHeartbeatHandler "gitlab.com/iotTracker/nerve/server/message/handler/heartbeat"
 	ServerMessageLoginHandler "gitlab.com/iotTracker/nerve/server/message/handler/login"
+	ServerMessageStatusHandler "gitlab.com/iotTracker/nerve/server/message/handler/status"
 	"os"
 	"os/signal"
 )
@@ -22,6 +23,7 @@ func main() {
 	Server.RegisterMessageHandler(ServerMessage.Heartbeat, ServerMessageHeartbeatHandler.New())
 	Server.RegisterMessageHandler(ServerMessage.GPSPosition, ServerMessageGPSPositionHandler.New())
 	Server.RegisterMessageHandler(ServerMessage.GPSPosition2, ServerMessageGPSPositionHandler.New())
+	Server.RegisterMessageHandler(ServerMessage.Status, ServerMessageStatusHandler.New())
 
 	go func() {
 		err := Server.Start()

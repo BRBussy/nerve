@@ -29,5 +29,5 @@ func (h *handler) Handle(request *serverMessageHandler.HandleRequest) (*serverMe
 
 	log.Info("Heartbeat")
 
-	return nil, nil
+	return &serverMessageHandler.HandleResponse{}, nil
 }

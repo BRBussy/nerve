@@ -68,8 +68,6 @@ CommLoop:
 				log.Warn(err.Error())
 				continue
 			}
-			inMessageBytes, _ := inMessage.Bytes()
-			log.Info("IN -->", inMessageBytes)
 
 			// handle the message
 			response, err := s.handleMessage(inMessage)
@@ -112,7 +110,6 @@ func (s *server) handleResponse(response *serverMessageHandler.HandleResponse, c
 		if err != nil {
 			return serverException.MessageConversion{Reasons: []string{"message to bytes", err.Error()}}
 		}
-		log.Info("OUT -->", outMessageBytes)
 		if _, err = c.Write(outMessageBytes); err != nil {
 			return serverException.SendingMessage{Message: response.Messages[msgIdx], Reasons: []string{err.Error()}}
 		}

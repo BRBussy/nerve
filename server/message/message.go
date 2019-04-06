@@ -59,9 +59,11 @@ func (m Message) String() string {
 	case Login:
 		return fmt.Sprintf("[type: Login, Data: %s]", m.Data)
 	case Heartbeat:
-		return fmt.Sprintf("[type: Login, Data: %s]", m.Data)
+		return fmt.Sprintf("[type: Heartbeat, Data: %s]", m.Data)
 	case GPSPosition:
 		return fmt.Sprintf("[type: GPS Position, Data: %s]", m.Data)
+	case Status:
+		return fmt.Sprintf("[type: Status, Data: %s]", m.Data)
 	default:
 
 	}
