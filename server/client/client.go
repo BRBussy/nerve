@@ -8,6 +8,18 @@ import (
 	serverMessage "gitlab.com/iotTracker/nerve/server/message"
 	serverMessageHandler "gitlab.com/iotTracker/nerve/server/message/handler"
 	"net"
+	"time"
+)
+
+const (
+	// Time allowed to write a message to the peer.
+	WriteWait = 10 * time.Second
+	// Time allowed to read the next pong message from the peer.
+	HeartbeatWait = 5 * time.Second
+	// Send pings to peer with this period. Must be less than pongWait.
+	HeartbeatPeriod = (HeartbeatWait * 9) / 10
+	// Maximum message size allowed from peer.
+	MaxMessageSize = 1024
 )
 
 type client struct {
@@ -39,6 +51,8 @@ func (c *client) Send(message serverMessage.Message) error {
 }
 
 func (c *client) HandleTX() {
+	hearbeatTicker := time.NewTicker(HeartbeatPeriod)
+
 	defer func() {
 		c.socket.Close()
 	}()
@@ -54,10 +68,27 @@ func (c *client) HandleTX() {
 			if err != nil {
 				log.Warn(clientException.MessageConversion{Reasons: []string{"message to bytes", err.Error()}}.Error())
 			}
+			c.socket.SetWriteDeadline(time.Now().Add(WriteWait))
 			if _, err = c.socket.Write(outMessageBytes); err != nil {
 				log.Warn(clientException.SendingMessage{Message: outMessage, Reasons: []string{err.Error()}}.Error())
 			}
 			log.Info("OUT: ", outMessage.String())
+
+		case <-hearbeatTicker.C:
+			heartbeatMessage := serverMessage.Message{
+				Type:       serverMessage.Heartbeat,
+				DataLength: 1,
+			}
+			heartbeatMessageBytes, err := heartbeatMessage.Bytes()
+			if err != nil {
+				log.Warn(clientException.MessageConversion{Reasons: []string{"heartbeat message to bytes", err.Error()}}.Error())
+			}
+			c.socket.SetWriteDeadline(time.Now().Add(WriteWait))
+			if _, err = c.socket.Write(heartbeatMessageBytes); err != nil {
+				log.Warn(clientException.SendingMessage{Message: heartbeatMessage, Reasons: []string{err.Error()}}.Error())
+			}
+			log.Info("OUT: ", heartbeatMessage.String())
+
 		}
 	}
 }
@@ -68,7 +99,7 @@ func (c *client) HandleRX() {
 	}()
 
 	log.Info(fmt.Sprintf("serving %s", c.socket.RemoteAddr().String()))
-	reader := bufio.NewReaderSize(c.socket, 1024)
+	reader := bufio.NewReaderSize(c.socket, MaxMessageSize)
 	scr := bufio.NewScanner(reader)
 	scr.Split(splitFunc)
 

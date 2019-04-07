@@ -2,7 +2,7 @@ package client
 
 import (
 	"encoding/hex"
-	serverException "gitlab.com/iotTracker/nerve/server/exception"
+	clientException "gitlab.com/iotTracker/nerve/server/client/exception"
 	"gitlab.com/iotTracker/nerve/server/message"
 	"io"
 	"strings"
@@ -22,7 +22,7 @@ func splitFunc(data []byte, atEOF bool) (advance int, token []byte, err error) {
 
 	// if start could not be found return an error
 	if startIdx == -1 {
-		return 0, nil, serverException.StartOfMessageNotFound{
+		return 0, nil, clientException.StartOfMessageNotFound{
 			Data:    hexDataString,
 			Reasons: []string{"splitting failed"},
 		}
@@ -49,7 +49,7 @@ func splitFunc(data []byte, atEOF bool) (advance int, token []byte, err error) {
 	messageBytes := make([]byte, hex.DecodedLen(len(messageHexStringBytes)))
 	noMessageBytes, err := hex.Decode(messageBytes, messageHexStringBytes)
 	if err != nil {
-		return 0, nil, serverException.DecodingError{Reasons: []string{err.Error()}}
+		return 0, nil, clientException.DecodingError{Reasons: []string{err.Error()}}
 	}
 
 	// set the amount that the scanner should advance by
