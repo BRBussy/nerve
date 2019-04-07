@@ -59,4 +59,7 @@ func (h *handler) Handle(request *serverMessageHandler.HandleRequest) (*serverMe
 		),
 	}},
 	}, nil
+
+	// 78 78 03 69 16 04 13 03 18 49 14 75 90 5B D3 0E 25 00 1E 10 BB F7 63 5D 14 75 90 06 E6 26 56 05 01 CC 00 28 66 0F 21 32 28 66 0F 1F 28 28 66 0E A8 1E 28 66 10 73 14 28 66 0F 20 14 0D 0A
+	// 78 78 05 57 78 78 5c a4 0d0a
 }

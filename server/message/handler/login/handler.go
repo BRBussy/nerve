@@ -7,7 +7,7 @@ import (
 	serverMessageHandlerException "gitlab.com/iotTracker/nerve/server/message/handler/exception"
 )
 
-const SuccessData = ""
+const SuccessData = "01"
 const FailureData = "44"
 
 type handler struct {
@@ -37,17 +37,30 @@ func (h *handler) Handle(request *serverMessageHandler.HandleRequest) (*serverMe
 
 	log.Info("Log in Device with IMEI: ", request.Message.Data[:16])
 
-	outMessage := serverMessage.Message{
-		Type:       serverMessage.Login,
-		Data:       FailureData,
-		DataLength: 1,
-	}
-	// determine if device is allowed to log in
+	responseMessages := make([]serverMessage.Message, 0)
+
 	if true {
-		outMessage.Data = SuccessData
+		responseMessages = append(responseMessages, serverMessage.Message{
+			Type:       serverMessage.Login,
+			Data:       SuccessData,
+			DataLength: 1,
+		})
+		responseMessages = append(responseMessages, serverMessage.Message{
+			Type:       serverMessage.ManualPosition,
+			Data:       "",
+			DataLength: 1,
+		})
+	} else {
+		responseMessages = append(responseMessages, serverMessage.Message{
+			Type:       serverMessage.Login,
+			Data:       FailureData,
+			DataLength: 1,
+		})
 	}
 
+	// 7878 05 57 78 78 5c a4 0d0a
+	// 7878 1F 57 00 60 01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 3B 3B 3B 0D 0A
 	return &serverMessageHandler.HandleResponse{
-		Messages: []serverMessage.Message{outMessage},
+		Messages: responseMessages,
 	}, nil
 }

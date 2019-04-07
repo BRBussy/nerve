@@ -54,70 +54,92 @@ func (m Message) Bytes() ([]byte, error) {
 	))
 }
 
+func (m Message) HexString() string {
+	dataLengthHex := fmt.Sprintf("%x", m.DataLength)
+	if len(dataLengthHex) == 1 {
+		dataLengthHex = "0" + dataLengthHex
+	}
+	return fmt.Sprintf(
+		"%s %s %s %s %s",
+		StartMarker,
+		dataLengthHex,
+		m.Type,
+		m.Data,
+		EndMarker,
+	)
+}
+
+// 14:54:04
+// 14:56:04
+
 func (m Message) String() string {
 	switch m.Type {
 	case Login:
-		return fmt.Sprintf("[type: Login, Data: %s]", m.Data)
+		return fmt.Sprintf("Type: Login - %s", m.HexString())
 	case Heartbeat:
-		return fmt.Sprintf("[type: Heartbeat, Data: %s]", m.Data)
+		return fmt.Sprintf("Type: Heartbeat - %s", m.HexString())
 	case GPSPosition:
-		return fmt.Sprintf("[type: GPS Position, Data: %s]", m.Data)
+		return fmt.Sprintf("Type: GPS Position - %s", m.HexString())
+	case GPSPosition2:
+		return fmt.Sprintf("Type: GPS Position2 - %s", m.HexString())
 	case Status:
-		return fmt.Sprintf("[type: Status, Data: %s]", m.Data)
+		return fmt.Sprintf("Type: Status - %s", m.HexString())
 	case Hibernation:
-		return fmt.Sprintf("[type: Device Hibernation, Data: %s]", m.Data)
+		return fmt.Sprintf("Type: Device Hibernation - %s", m.HexString())
 	case FactorySettingsRestored:
-		return fmt.Sprintf("[type : Factory Settings, Data: %s]", m.Data)
+		return fmt.Sprintf("Type: : Factory Settings - %s", m.HexString())
 	case WhiteListTotal:
-		return fmt.Sprintf("[type : White List Total, Data: %s]", m.Data)
+		return fmt.Sprintf("Type: : White List Total - %s", m.HexString())
 	case OfflineWIFIData:
-		return fmt.Sprintf("[type: Offline WIFI Data, Data: %s]", m.Data)
+		return fmt.Sprintf("Type: Offline WIFI Data - %s", m.HexString())
 	case TimeSynchronisation:
-		return fmt.Sprintf("[type: Time Syncronisation, Data: %s]", m.Data)
+		return fmt.Sprintf("Type: Time Syncronisation - %s", m.HexString())
 	case SetRemoteListeningCellNumber:
-		return fmt.Sprintf("[type: Set Remote Listening Number, Data: %s]", m.Data)
+		return fmt.Sprintf("Type: Set Remote Listening Number - %s", m.HexString())
 	case SetSOSNumber:
-		return fmt.Sprintf("[type: Set SOS Number, Data: %s]", m.Data)
+		return fmt.Sprintf("Type: Set SOS Number - %s", m.HexString())
 	case SetDadNumber:
-		return fmt.Sprintf("[type: Set Dad Number, Data: %s]", m.Data)
+		return fmt.Sprintf("Type: Set Dad Number - %s", m.HexString())
 	case SetMomNumber:
-		return fmt.Sprintf("[type: Set Mom Number, Data: %s]", m.Data)
+		return fmt.Sprintf("Type: Set Mom Number - %s", m.HexString())
 	case StopDataUpload:
-		return fmt.Sprintf("[type: Stop Data Upload, Data: %s]", m.Data)
+		return fmt.Sprintf("Type: Stop Data Upload - %s", m.HexString())
 	case SetGPSOffTime:
-		return fmt.Sprintf("[type: Set GPS Off Time, Data: %s]", m.Data)
+		return fmt.Sprintf("Type: Set GPS Off Time - %s", m.HexString())
 	case SetDoNotDisturb:
-		return fmt.Sprintf("[type: Set Do Not Disturb, Data: %s]", m.Data)
+		return fmt.Sprintf("Type: Set Do Not Disturb - %s", m.HexString())
 	case RestartDevice:
-		return fmt.Sprintf("[type: Restart Device, Data: %s]", m.Data)
+		return fmt.Sprintf("Type: Restart Device - %s", m.HexString())
 	case FindDevice:
-		return fmt.Sprintf("[type: Find Device, Data: %s]", m.Data)
+		return fmt.Sprintf("Type: Find Device - %s", m.HexString())
 	case SetAlarmClock:
-		return fmt.Sprintf("[type: Set Alarm Clock, Data: %s]", m.Data)
+		return fmt.Sprintf("Type: Set Alarm Clock - %s", m.HexString())
 	case TurnOffAlarmClock:
-		return fmt.Sprintf("[type: Turn Off Alarm Clock, Data: %s]", m.Data)
+		return fmt.Sprintf("Type: Turn Off Alarm Clock - %s", m.HexString())
 	case DeviceSetup:
-		return fmt.Sprintf("[type: Device Setup, Data: %s]", m.Data)
+		return fmt.Sprintf("Type: Device Setup - %s", m.HexString())
 	case WhiteListSynchronisation:
-		return fmt.Sprintf("[type: White List Synchronisation, Data: %s]", m.Data)
+		return fmt.Sprintf("Type: White List Synchronisation - %s", m.HexString())
 	case TurnOnLightSensorSwitch:
-		return fmt.Sprintf("[type: Turn On Light Sensor Switch, Data: %s]", m.Data)
+		return fmt.Sprintf("Type: Turn On Light Sensor Switch - %s", m.HexString())
 	case SetServerIPAndPort:
-		return fmt.Sprintf("[type: Set Server IP and Port, Data: %s]", m.Data)
+		return fmt.Sprintf("Type: Set Server IP and Port - %s", m.HexString())
 	case SetRecoveryPassword:
-		return fmt.Sprintf("[type: Set Recovery Password, Data: %s]", m.Data)
+		return fmt.Sprintf("Type: Set Recovery Password - %s", m.HexString())
 	case WIFIPosition:
-		return fmt.Sprintf("[type: WIFI Position, Data: %s]", m.Data)
+		return fmt.Sprintf("Type: WIFI Position - %s", m.HexString())
 	case ManualPosition:
-		return fmt.Sprintf("[type: Manual Position, Data: %s]", m.Data)
+		return fmt.Sprintf("Type: Manual Position - %s", m.HexString())
 	case ChargeComplete:
-		return fmt.Sprintf("[type: Charge Complete, Data: %s]", m.Data)
+		return fmt.Sprintf("Type: Charge Complete - %s", m.HexString())
 	case ChargerConnected:
-		return fmt.Sprintf("[type: Charger Connected, Data: %s]", m.Data)
+		return fmt.Sprintf("Type: Charger Connected - %s", m.HexString())
 	case ChargerDisconnected:
-		return fmt.Sprintf("[type: Charger Disconnected, Data: %s]", m.Data)
+		return fmt.Sprintf("Type: Charger Disconnected - %s", m.HexString())
+	case SetUploadInterval:
+		return fmt.Sprintf("Type: Set Upload Interval - %s", m.HexString())
 
 	default:
-		return fmt.Sprintf("[type: unknown '%s', Data: %s]", m.Type, m.Data)
+		return fmt.Sprintf("Type: unknown '%s' - %s", m.Type, m.HexString())
 	}
 }

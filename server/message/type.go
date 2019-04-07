@@ -37,3 +37,5 @@ const ManualPosition Type = "80"
 const ChargeComplete Type = "81"
 const ChargerConnected Type = "82"
 const ChargerDisconnected Type = "83"
+
+const SetUploadInterval Type = "97"

@@ -15,7 +15,7 @@ const (
 	// Time allowed to write a message to the peer.
 	WriteWait = 10 * time.Second
 	// Time allowed to read the next pong message from the peer.
-	HeartbeatWait = 5 * time.Second
+	HeartbeatWait = 30 * time.Second
 	// Send pings to peer with this period. Must be less than pongWait.
 	HeartbeatPeriod = (HeartbeatWait * 9) / 10
 	// Maximum message size allowed from peer.
@@ -51,10 +51,11 @@ func (c *client) Send(message serverMessage.Message) error {
 }
 
 func (c *client) HandleTX() {
-	hearbeatTicker := time.NewTicker(HeartbeatPeriod)
+	//heartbeatTicker := time.NewTicker(HeartbeatPeriod)
 
 	defer func() {
 		c.socket.Close()
+		// heartbeatTicker.Stop()
 	}()
 
 	for {
@@ -74,20 +75,20 @@ func (c *client) HandleTX() {
 			}
 			log.Info("OUT: ", outMessage.String())
 
-		case <-hearbeatTicker.C:
-			heartbeatMessage := serverMessage.Message{
-				Type:       serverMessage.Heartbeat,
-				DataLength: 1,
-			}
-			heartbeatMessageBytes, err := heartbeatMessage.Bytes()
-			if err != nil {
-				log.Warn(clientException.MessageConversion{Reasons: []string{"heartbeat message to bytes", err.Error()}}.Error())
-			}
-			c.socket.SetWriteDeadline(time.Now().Add(WriteWait))
-			if _, err = c.socket.Write(heartbeatMessageBytes); err != nil {
-				log.Warn(clientException.SendingMessage{Message: heartbeatMessage, Reasons: []string{err.Error()}}.Error())
-			}
-			log.Info("OUT: ", heartbeatMessage.String())
+			//case <-heartbeatTicker.C:
+			//	heartbeatMessage := serverMessage.Message{
+			//		Type:       serverMessage.Heartbeat,
+			//		DataLength: 1,
+			//	}
+			//	heartbeatMessageBytes, err := heartbeatMessage.Bytes()
+			//	if err != nil {
+			//		log.Warn(clientException.MessageConversion{Reasons: []string{"heartbeat message to bytes", err.Error()}}.Error())
+			//	}
+			//	c.socket.SetWriteDeadline(time.Now().Add(WriteWait))
+			//	if _, err = c.socket.Write(heartbeatMessageBytes); err != nil {
+			//		log.Warn(clientException.SendingMessage{Message: heartbeatMessage, Reasons: []string{err.Error()}}.Error())
+			//	}
+			//	log.Info("OUT: ", heartbeatMessage.String())
 
 		}
 	}
