@@ -118,6 +118,6 @@ func (m Message) String() string {
 		return fmt.Sprintf("[type: Charger Disconnected, Data: %s]", m.Data)
 
 	default:
-		return fmt.Sprintf("[type: unknown, Data: %s]", m.Data)
+		return fmt.Sprintf("[type: unknown '%s', Data: %s]", m.Type, m.Data)
 	}
 }

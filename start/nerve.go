@@ -25,7 +25,7 @@ import (
 func main() {
 	// set up  server
 	Server := server.New(
-		"5021",
+		"7018",
 		"0.0.0.0",
 	)
 
