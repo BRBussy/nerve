@@ -2,6 +2,7 @@ package gpsPosition
 
 import (
 	"fmt"
+	messagingProducer "gitlab.com/iotTracker/brain/messaging/producer"
 	"gitlab.com/iotTracker/nerve/log"
 	serverMessage "gitlab.com/iotTracker/nerve/server/message"
 	serverMessageHandler "gitlab.com/iotTracker/nerve/server/message/handler"
@@ -10,6 +11,7 @@ import (
 )
 
 type handler struct {
+	brainQueueProducer messagingProducer.Producer
 }
 
 func New() serverMessageHandler.Handler {

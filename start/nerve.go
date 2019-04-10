@@ -1,6 +1,9 @@
 package main
 
 import (
+	asyncMessagingProducer "gitlab.com/iotTracker/brain/messaging/producer/sync"
+
+	"flag"
 	"gitlab.com/iotTracker/nerve/log"
 	"gitlab.com/iotTracker/nerve/server"
 	ServerMessage "gitlab.com/iotTracker/nerve/server/message"
@@ -21,9 +24,24 @@ import (
 	ServerWIFIPositionMessageHandler "gitlab.com/iotTracker/nerve/server/message/handler/wifiPosition"
 	"os"
 	"os/signal"
+	"strings"
 )
 
 func main() {
+	kafkaBrokers := flag.String("kafkaBrokers", "localhost:9092", "ipAddress:port of each kafka broker node (, separated)")
+	flag.Parse()
+
+	// set up kafka messaging
+	kafkaBrokerNodes := strings.Split(*kafkaBrokers, ",")
+	brainQueueProducer := asyncMessagingProducer.New(
+		kafkaBrokerNodes,
+		"brainQueue",
+	)
+	log.Info("Starting brainQueue producer")
+	if err := brainQueueProducer.Start(); err != nil {
+		log.Fatal(err.Error())
+	}
+
 	// set up  server
 	Server := server.New(
 		"7018",
