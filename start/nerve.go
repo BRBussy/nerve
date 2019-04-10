@@ -50,8 +50,12 @@ func main() {
 
 	Server.RegisterMessageHandler(ServerMessage.Login, ServerLoginMessageHandler.New())
 	Server.RegisterMessageHandler(ServerMessage.Heartbeat, ServerHeartbeatMessageHandler.New())
-	Server.RegisterMessageHandler(ServerMessage.GPSPosition, ServerGPSPositionMessageHandler.New())
-	Server.RegisterMessageHandler(ServerMessage.GPSPosition2, ServerGPSPositionMessageHandler.New())
+	Server.RegisterMessageHandler(ServerMessage.GPSPosition, ServerGPSPositionMessageHandler.New(
+		brainQueueProducer,
+	))
+	Server.RegisterMessageHandler(ServerMessage.GPSPosition2, ServerGPSPositionMessageHandler.New(
+		brainQueueProducer,
+	))
 	Server.RegisterMessageHandler(ServerMessage.Status, ServerStatusMessageHandler.New())
 	Server.RegisterMessageHandler(ServerMessage.Hibernation, ServerHibernationMessageHandler.New())
 	Server.RegisterMessageHandler(ServerMessage.FactorySettingsRestored, ServerFactorySettingsRestoredMessageHandler.New())

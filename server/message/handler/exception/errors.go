@@ -31,3 +31,11 @@ type MessageInvalid struct {
 func (e MessageInvalid) Error() string {
 	return fmt.Sprintf("message invalid: %s, %s", e.Message, strings.Join(e.Reasons, "; "))
 }
+
+type MessageProduction struct {
+	Reasons []string
+}
+
+func (e MessageProduction) Error() string {
+	return "message production error: " + strings.Join(e.Reasons, "; ")
+}

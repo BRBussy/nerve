@@ -14,8 +14,12 @@ type handler struct {
 	brainQueueProducer messagingProducer.Producer
 }
 
-func New() serverMessageHandler.Handler {
-	return &handler{}
+func New(
+	brainQueueProducer messagingProducer.Producer,
+) serverMessageHandler.Handler {
+	return &handler{
+		brainQueueProducer: brainQueueProducer,
+	}
 }
 
 func (h *handler) ValidateHandleRequest(request *serverMessageHandler.HandleRequest) error {
@@ -128,6 +132,10 @@ func (h *handler) Handle(request *serverMessageHandler.HandleRequest) (*serverMe
 		speed,
 		heading,
 	))
+
+	if err := h.brainQueueProducer.Produce([]byte("aweh gps")); err != nil {
+		return nil, serverMessageHandlerException.MessageProduction{Reasons: []string{err.Error()}}
+	}
 
 	return &serverMessageHandler.HandleResponse{
 		Messages: []serverMessage.Message{{
