@@ -76,10 +76,11 @@ func main() {
 
 	//Wait for interrupt signal
 	systemSignalsChannel := make(chan os.Signal, 1)
-	signal.Notify(systemSignalsChannel)
+	signal.Notify(systemSignalsChannel, os.Interrupt)
 	for {
 		select {
 		case s := <-systemSignalsChannel:
+			Server.Stop()
 			log.Info("Application is shutting down.. ( ", s, " )")
 			return
 		}

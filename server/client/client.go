@@ -14,10 +14,10 @@ import (
 const (
 	// Time allowed to write a message to the peer.
 	WriteWait = 10 * time.Second
-	// Time allowed to read the next pong message from the peer.
+	// Time allowed between heartbeats
+	// if no heartbeat received in after this time the connection
+	// is terminated
 	HeartbeatWait = 30 * time.Second
-	// Send pings to peer with this period. Must be less than pongWait.
-	HeartbeatPeriod = (HeartbeatWait * 9) / 10
 	// Maximum message size allowed from peer.
 	MaxMessageSize = 1024
 )
@@ -26,6 +26,10 @@ type client struct {
 	socket           net.Conn
 	outgoingMessages chan serverMessage.Message
 	messageHandlers  map[serverMessage.Type]serverMessageHandler.Handler
+	loggedIn         bool
+	stop             chan bool
+	stopTX           chan bool
+	stopRX           bool
 }
 
 func New(
@@ -36,6 +40,8 @@ func New(
 		socket:           socket,
 		outgoingMessages: make(chan serverMessage.Message),
 		messageHandlers:  messageHandlers,
+		stopTX:           make(chan bool),
+		stop:             make(chan bool),
 	}
 }
 
@@ -51,13 +57,6 @@ func (c *client) Send(message serverMessage.Message) error {
 }
 
 func (c *client) HandleTX() {
-	//heartbeatTicker := time.NewTicker(HeartbeatPeriod)
-
-	defer func() {
-		c.socket.Close()
-		// heartbeatTicker.Stop()
-	}()
-
 	for {
 		select {
 		case outMessage, ok := <-c.outgoingMessages:
@@ -75,29 +74,32 @@ func (c *client) HandleTX() {
 			}
 			log.Info("OUT: ", outMessage.String())
 
-			//case <-heartbeatTicker.C:
-			//	heartbeatMessage := serverMessage.Message{
-			//		Type:       serverMessage.Heartbeat,
-			//		DataLength: 1,
-			//	}
-			//	heartbeatMessageBytes, err := heartbeatMessage.Bytes()
-			//	if err != nil {
-			//		log.Warn(clientException.MessageConversion{Reasons: []string{"heartbeat message to bytes", err.Error()}}.Error())
-			//	}
-			//	c.socket.SetWriteDeadline(time.Now().Add(WriteWait))
-			//	if _, err = c.socket.Write(heartbeatMessageBytes); err != nil {
-			//		log.Warn(clientException.SendingMessage{Message: heartbeatMessage, Reasons: []string{err.Error()}}.Error())
-			//	}
-			//	log.Info("OUT: ", heartbeatMessage.String())
+		case <-c.stopTX:
+			log.Info(fmt.Sprintf("stopping TX with %s", c.socket.RemoteAddr().String()))
+			return
+		}
+	}
+}
 
+func (c *client) HandleLifeCycle() {
+	heartbeatCountdownTimer := time.NewTimer(HeartbeatWait)
+
+	for {
+		select {
+		case <-heartbeatCountdownTimer.C:
+			log.Info(fmt.Sprintf("timeout waiting for heartbeat from %s", c.socket.RemoteAddr().String()))
+			c.stopTX <- true
+			c.stopRX = true
+			c.socket.Close()
+		case <-c.stop:
+			c.stopTX <- true
+			c.stopRX = true
+			c.socket.Close()
 		}
 	}
 }
 
 func (c *client) HandleRX() {
-	defer func() {
-		c.socket.Close()
-	}()
 
 	log.Info(fmt.Sprintf("serving %s", c.socket.RemoteAddr().String()))
 	reader := bufio.NewReaderSize(c.socket, MaxMessageSize)
@@ -119,6 +121,7 @@ CommLoop:
 			}
 			log.Info("IN: ", inMessage.String())
 			// handle the message
+
 			if c.messageHandlers[inMessage.Type] == nil {
 				log.Warn(clientException.NoHandler{Message: *inMessage}.Error())
 			}
@@ -135,9 +138,12 @@ CommLoop:
 		}
 		// check to see if scanner stopped with an error
 		if scr.Err() != nil {
-			log.Warn("scanning stopped with an error:", scr.Err().Error())
+			if !c.stopRX {
+				log.Warn("scanning stopped with error:", scr.Err().Error())
+				c.stop <- true
+			}
 			break CommLoop
 		}
 	}
-
+	log.Info(fmt.Sprintf("connection with %s terminated", c.socket.RemoteAddr().String()))
 }
