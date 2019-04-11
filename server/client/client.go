@@ -41,6 +41,7 @@ func New(
 		outgoingMessages: make(chan serverMessage.Message),
 		messageHandlers:  messageHandlers,
 		stopTX:           make(chan bool),
+		stopRX:           false,
 		stop:             make(chan bool),
 	}
 }
@@ -56,6 +57,28 @@ func (c *client) Send(message serverMessage.Message) error {
 	return nil
 }
 
+func (c *client) HandleLifeCycle() {
+	heartbeatCountdownTimer := time.NewTimer(HeartbeatWait)
+LifeCycle:
+	for {
+		select {
+		case <-heartbeatCountdownTimer.C:
+			log.Info(fmt.Sprintf("timeout waiting for heartbeat from %s", c.socket.RemoteAddr().String()))
+			c.stopTX <- true
+			c.stopRX = true
+			c.socket.Close()
+			break LifeCycle
+
+		case <-c.stop:
+			c.stopTX <- true
+			c.stopRX = true
+			c.socket.Close()
+			break LifeCycle
+		}
+	}
+	log.Info(fmt.Sprintf("%s lifecycle ended", c.socket.RemoteAddr().String()))
+}
+
 func (c *client) HandleTX() {
 	for {
 		select {
@@ -67,34 +90,19 @@ func (c *client) HandleTX() {
 			outMessageBytes, err := outMessage.Bytes()
 			if err != nil {
 				log.Warn(clientException.MessageConversion{Reasons: []string{"message to bytes", err.Error()}}.Error())
+				continue
 			}
 			c.socket.SetWriteDeadline(time.Now().Add(WriteWait))
 			if _, err = c.socket.Write(outMessageBytes); err != nil {
 				log.Warn(clientException.SendingMessage{Message: outMessage, Reasons: []string{err.Error()}}.Error())
+				c.stop <- true
+				continue
 			}
 			log.Info("OUT: ", outMessage.String())
 
 		case <-c.stopTX:
 			log.Info(fmt.Sprintf("stopping TX with %s", c.socket.RemoteAddr().String()))
 			return
-		}
-	}
-}
-
-func (c *client) HandleLifeCycle() {
-	heartbeatCountdownTimer := time.NewTimer(HeartbeatWait)
-
-	for {
-		select {
-		case <-heartbeatCountdownTimer.C:
-			log.Info(fmt.Sprintf("timeout waiting for heartbeat from %s", c.socket.RemoteAddr().String()))
-			c.stopTX <- true
-			c.stopRX = true
-			c.socket.Close()
-		case <-c.stop:
-			c.stopTX <- true
-			c.stopRX = true
-			c.socket.Close()
 		}
 	}
 }
@@ -106,7 +114,7 @@ func (c *client) HandleRX() {
 	scr := bufio.NewScanner(reader)
 	scr.Split(splitFunc)
 
-CommLoop:
+Comms:
 	for {
 		// scan advances the scanner to the next token
 		// which in this case is a complete message from the device
@@ -130,6 +138,7 @@ CommLoop:
 			})
 			if err != nil {
 				log.Warn(err.Error())
+				continue
 			}
 			// send back any messages if required
 			for msgIdx := range response.Messages {
@@ -142,7 +151,7 @@ CommLoop:
 				log.Warn("scanning stopped with error:", scr.Err().Error())
 				c.stop <- true
 			}
-			break CommLoop
+			break Comms
 		}
 	}
 	log.Info(fmt.Sprintf("connection with %s terminated", c.socket.RemoteAddr().String()))
