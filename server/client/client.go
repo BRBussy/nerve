@@ -128,10 +128,23 @@ Comms:
 				continue
 			}
 			log.Info("IN: ", inMessage.String())
-			// handle the message
 
+			// if this message is a login message
+			if inMessage.Type == serverMessage.Login {
+				// log in the client device
+				c.loggedIn = true
+			} else if !c.loggedIn {
+				// otherwise if this message is not a logged in message, and the client is not logged in
+				// stop the client
+				log.Warn(clientException.UnauthenticatedCommunication{Reasons: []string{"device not logged in"}})
+				c.stop <- true
+				continue
+			}
+
+			// otherwise, if there is a handler for this message type, handle the message
 			if c.messageHandlers[inMessage.Type] == nil {
 				log.Warn(clientException.NoHandler{Message: *inMessage}.Error())
+				continue
 			}
 			response, err := c.messageHandlers[inMessage.Type].Handle(&serverMessageHandler.HandleRequest{
 				Message: *inMessage,
@@ -140,11 +153,13 @@ Comms:
 				log.Warn(err.Error())
 				continue
 			}
+
 			// send back any messages if required
 			for msgIdx := range response.Messages {
 				c.outgoingMessages <- response.Messages[msgIdx]
 			}
 		}
+
 		// check to see if scanner stopped with an error
 		if scr.Err() != nil {
 			if !c.stopRX {

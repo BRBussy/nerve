@@ -47,3 +47,11 @@ type DecodingError struct {
 func (e DecodingError) Error() string {
 	return "decoding error: " + strings.Join(e.Reasons, "; ")
 }
+
+type UnauthenticatedCommunication struct {
+	Reasons []string
+}
+
+func (e UnauthenticatedCommunication) Error() string {
+	return "unauthenticated communication: " + strings.Join(e.Reasons, "; ")
+}
