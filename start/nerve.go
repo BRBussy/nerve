@@ -1,7 +1,7 @@
 package main
 
 import (
-	asyncMessagingProducer "gitlab.com/iotTracker/brain/messaging/producer/sync"
+	asyncMessagingProducer "gitlab.com/iotTracker/messaging/producer/sync"
 
 	"flag"
 	"gitlab.com/iotTracker/nerve/log"
