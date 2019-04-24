@@ -2,7 +2,7 @@ package gpsPosition
 
 import (
 	"fmt"
-	messagingProducer "gitlab.com/iotTracker/brain/messaging/producer"
+	messagingProducer "gitlab.com/iotTracker/messaging/producer"
 	"gitlab.com/iotTracker/nerve/log"
 	serverMessage "gitlab.com/iotTracker/nerve/server/message"
 	serverMessageHandler "gitlab.com/iotTracker/nerve/server/message/handler"
