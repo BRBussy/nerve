@@ -3,6 +3,7 @@ package client
 import (
 	"bufio"
 	"fmt"
+	zx303DeviceIdentifier "gitlab.com/iotTracker/brain/search/identifier/device/zx303"
 	zx303DeviceAuthenticator "gitlab.com/iotTracker/brain/tracker/device/zx303/authenticator"
 	"gitlab.com/iotTracker/nerve/log"
 	clientException "gitlab.com/iotTracker/nerve/server/client/exception"
@@ -136,8 +137,9 @@ Comms:
 			// if this message is a login message
 			if inMessage.Type == serverMessage.Login {
 				_, err := c.zx303DeviceAuthenticator.Login(&zx303DeviceAuthenticator.LoginRequest{
-					Claims:     nil,
-					Identifier: nil,
+					Identifier: zx303DeviceIdentifier.Identifier{
+						IMEI: "",
+					},
 				})
 				if err != nil {
 					log.Warn(clientException.AuthenticationError{Reasons: []string{"device log in", err.Error()}})
