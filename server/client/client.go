@@ -136,13 +136,18 @@ Comms:
 
 			// if this message is a login message
 			if inMessage.Type == serverMessage.Login {
-				_, err := c.zx303DeviceAuthenticator.Login(&zx303DeviceAuthenticator.LoginRequest{
+				loginResponse, err := c.zx303DeviceAuthenticator.Login(&zx303DeviceAuthenticator.LoginRequest{
 					Identifier: zx303DeviceIdentifier.Identifier{
-						IMEI: "",
+						IMEI: "123456",
 					},
 				})
 				if err != nil {
 					log.Warn(clientException.AuthenticationError{Reasons: []string{"device log in", err.Error()}})
+					c.stop <- true
+					continue
+				}
+				if !loginResponse.Result {
+					log.Warn(clientException.AuthenticationError{Reasons: []string{"device log in result false"}})
 					c.stop <- true
 					continue
 				}
