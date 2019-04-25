@@ -3,6 +3,7 @@ package client
 import (
 	"bufio"
 	"fmt"
+	zx303DeviceAdministrator "gitlab.com/iotTracker/brain/tracker/device/zx303/administrator"
 	"gitlab.com/iotTracker/nerve/log"
 	clientException "gitlab.com/iotTracker/nerve/server/client/exception"
 	serverMessage "gitlab.com/iotTracker/nerve/server/message"
@@ -23,26 +24,29 @@ const (
 )
 
 type client struct {
-	socket           net.Conn
-	outgoingMessages chan serverMessage.Message
-	messageHandlers  map[serverMessage.Type]serverMessageHandler.Handler
-	loggedIn         bool
-	stop             chan bool
-	stopTX           chan bool
-	stopRX           bool
+	zx303DeviceAdministrator zx303DeviceAdministrator.Administrator
+	socket                   net.Conn
+	outgoingMessages         chan serverMessage.Message
+	messageHandlers          map[serverMessage.Type]serverMessageHandler.Handler
+	loggedIn                 bool
+	stop                     chan bool
+	stopTX                   chan bool
+	stopRX                   bool
 }
 
 func New(
+	zx303DeviceAdministrator zx303DeviceAdministrator.Administrator,
 	socket net.Conn,
 	messageHandlers map[serverMessage.Type]serverMessageHandler.Handler,
 ) *client {
 	return &client{
-		socket:           socket,
-		outgoingMessages: make(chan serverMessage.Message),
-		messageHandlers:  messageHandlers,
-		stopTX:           make(chan bool),
-		stopRX:           false,
-		stop:             make(chan bool),
+		zx303DeviceAdministrator: zx303DeviceAdministrator,
+		socket:                   socket,
+		outgoingMessages:         make(chan serverMessage.Message),
+		messageHandlers:          messageHandlers,
+		stopTX:                   make(chan bool),
+		stopRX:                   false,
+		stop:                     make(chan bool),
 	}
 }
 

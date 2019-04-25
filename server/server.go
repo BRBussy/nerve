@@ -2,6 +2,7 @@ package server
 
 import (
 	"fmt"
+	zx303DeviceAdministrator "gitlab.com/iotTracker/brain/tracker/device/zx303/administrator"
 	"gitlab.com/iotTracker/nerve/log"
 	"gitlab.com/iotTracker/nerve/server/client"
 	serverException "gitlab.com/iotTracker/nerve/server/exception"
@@ -11,23 +12,26 @@ import (
 )
 
 type server struct {
-	Port            string
-	IPAddress       string
-	done            chan bool
-	listener        net.Listener
-	MessageHandlers map[serverMessage.Type]serverMessageHandler.Handler
+	Port                     string
+	IPAddress                string
+	done                     chan bool
+	listener                 net.Listener
+	MessageHandlers          map[serverMessage.Type]serverMessageHandler.Handler
+	zx303DeviceAdministrator zx303DeviceAdministrator.Administrator
 }
 
 func New(
 	Port string,
 	IPAddress string,
+	zx303DeviceAdministrator zx303DeviceAdministrator.Administrator,
 ) *server {
 
 	return &server{
-		Port:            Port,
-		IPAddress:       IPAddress,
-		MessageHandlers: make(map[serverMessage.Type]serverMessageHandler.Handler),
-		done:            make(chan bool),
+		Port:                     Port,
+		IPAddress:                IPAddress,
+		MessageHandlers:          make(map[serverMessage.Type]serverMessageHandler.Handler),
+		done:                     make(chan bool),
+		zx303DeviceAdministrator: zx303DeviceAdministrator,
 	}
 }
 
@@ -58,7 +62,11 @@ func (s *server) Start() error {
 			}
 		}
 
-		newClient := client.New(c, s.MessageHandlers)
+		newClient := client.New(
+			s.zx303DeviceAdministrator,
+			c,
+			s.MessageHandlers,
+		)
 		go newClient.HandleRX()
 		go newClient.HandleTX()
 		go newClient.HandleLifeCycle()
