@@ -4,6 +4,8 @@ import (
 	asyncMessagingProducer "gitlab.com/iotTracker/messaging/producer/sync"
 
 	"flag"
+	basicJsonRpcClient "gitlab.com/iotTracker/brain/communication/jsonRpc/client/basic"
+	authJsonRpcAdaptor "gitlab.com/iotTracker/brain/security/authorization/service/adaptor/jsonRpc"
 	"gitlab.com/iotTracker/nerve/log"
 	"gitlab.com/iotTracker/nerve/server"
 	ServerMessage "gitlab.com/iotTracker/nerve/server/message"
@@ -29,6 +31,9 @@ import (
 
 func main() {
 	kafkaBrokers := flag.String("kafkaBrokers", "localhost:9092", "ipAddress:port of each kafka broker node (, separated)")
+	brainUrl := flag.String("brainUrl", "http://localhost:9011/api", "url of brain service")
+	brainAPIUserUsername := flag.String("brainAPIUserUsername", "f03c27d6-2eb7-4156-a179-aec187a1baf1", "username of brain api user")
+	brainAPIUserPassword := flag.String("brainAPIUserPassword", "lZXkc8YDQymXPpdgURVhcJ2JUsz2/J7aK8h7Cf9N8Gw=", "password for brain api user")
 	flag.Parse()
 
 	// set up kafka messaging
@@ -41,6 +46,15 @@ func main() {
 	if err := brainQueueProducer.Start(); err != nil {
 		log.Fatal(err.Error())
 	}
+
+	jsonRpcClient := basicJsonRpcClient.New(*brainUrl)
+	if err := jsonRpcClient.Login(authJsonRpcAdaptor.LoginRequest{
+		UsernameOrEmailAddress: *brainAPIUserUsername,
+		Password:               *brainAPIUserPassword,
+	}); err != nil {
+		log.Fatal("unable to log into brain: " + err.Error())
+	}
+	log.Info("successfully logged into brain")
 
 	// set up  server
 	Server := server.New(
