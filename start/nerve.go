@@ -6,7 +6,7 @@ import (
 	"flag"
 	basicJsonRpcClient "gitlab.com/iotTracker/brain/communication/jsonRpc/client/basic"
 	authJsonRpcAdaptor "gitlab.com/iotTracker/brain/security/authorization/service/adaptor/jsonRpc"
-	zx303DeviceJsonRpcAdministrator "gitlab.com/iotTracker/brain/tracker/device/zx303/administrator/jsonRpc"
+	zx303DeviceJsonRpcAuthenticator "gitlab.com/iotTracker/brain/tracker/device/zx303/authenticator/jsonRpc"
 	"gitlab.com/iotTracker/nerve/log"
 	"gitlab.com/iotTracker/nerve/server"
 	ServerMessage "gitlab.com/iotTracker/nerve/server/message"
@@ -57,7 +57,7 @@ func main() {
 	}
 	log.Info("successfully logged into brain")
 
-	zx303DeviceAdministrator := zx303DeviceJsonRpcAdministrator.New(
+	zx303DeviceAuthenticator := zx303DeviceJsonRpcAuthenticator.New(
 		jsonRpcClient,
 	)
 
@@ -65,7 +65,7 @@ func main() {
 	Server := server.New(
 		"7018",
 		"0.0.0.0",
-		zx303DeviceAdministrator,
+		zx303DeviceAuthenticator,
 	)
 	Server.RegisterMessageHandler(ServerMessage.Login, ServerLoginMessageHandler.New())
 	Server.RegisterMessageHandler(ServerMessage.Heartbeat, ServerHeartbeatMessageHandler.New())

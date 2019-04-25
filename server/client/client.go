@@ -3,7 +3,7 @@ package client
 import (
 	"bufio"
 	"fmt"
-	zx303DeviceAdministrator "gitlab.com/iotTracker/brain/tracker/device/zx303/administrator"
+	zx303DeviceAuthenticator "gitlab.com/iotTracker/brain/tracker/device/zx303/authenticator"
 	"gitlab.com/iotTracker/nerve/log"
 	clientException "gitlab.com/iotTracker/nerve/server/client/exception"
 	serverMessage "gitlab.com/iotTracker/nerve/server/message"
@@ -24,7 +24,7 @@ const (
 )
 
 type client struct {
-	zx303DeviceAdministrator zx303DeviceAdministrator.Administrator
+	zx303DeviceAuthenticator zx303DeviceAuthenticator.Authenticator
 	socket                   net.Conn
 	outgoingMessages         chan serverMessage.Message
 	messageHandlers          map[serverMessage.Type]serverMessageHandler.Handler
@@ -35,12 +35,12 @@ type client struct {
 }
 
 func New(
-	zx303DeviceAdministrator zx303DeviceAdministrator.Administrator,
+	zx303DeviceAuthenticator zx303DeviceAuthenticator.Authenticator,
 	socket net.Conn,
 	messageHandlers map[serverMessage.Type]serverMessageHandler.Handler,
 ) *client {
 	return &client{
-		zx303DeviceAdministrator: zx303DeviceAdministrator,
+		zx303DeviceAuthenticator: zx303DeviceAuthenticator,
 		socket:                   socket,
 		outgoingMessages:         make(chan serverMessage.Message),
 		messageHandlers:          messageHandlers,
@@ -135,8 +135,19 @@ Comms:
 
 			// if this message is a login message
 			if inMessage.Type == serverMessage.Login {
+				_, err := c.zx303DeviceAuthenticator.Login(&zx303DeviceAuthenticator.LoginRequest{
+					Claims:     nil,
+					Identifier: nil,
+				})
+				if err != nil {
+					log.Warn(clientException.AuthenticationError{Reasons: []string{"device log in", err.Error()}})
+					c.stop <- true
+					continue
+				}
+
 				// log in the client device
 				c.loggedIn = true
+
 			} else if !c.loggedIn {
 				// otherwise if this message is not a logged in message, and the client is not logged in
 				// stop the client

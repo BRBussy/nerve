@@ -2,7 +2,7 @@ package server
 
 import (
 	"fmt"
-	zx303DeviceAdministrator "gitlab.com/iotTracker/brain/tracker/device/zx303/administrator"
+	zx303DeviceAuthenticator "gitlab.com/iotTracker/brain/tracker/device/zx303/authenticator"
 	"gitlab.com/iotTracker/nerve/log"
 	"gitlab.com/iotTracker/nerve/server/client"
 	serverException "gitlab.com/iotTracker/nerve/server/exception"
@@ -17,13 +17,13 @@ type server struct {
 	done                     chan bool
 	listener                 net.Listener
 	MessageHandlers          map[serverMessage.Type]serverMessageHandler.Handler
-	zx303DeviceAdministrator zx303DeviceAdministrator.Administrator
+	zx303DeviceAuthenticator zx303DeviceAuthenticator.Authenticator
 }
 
 func New(
 	Port string,
 	IPAddress string,
-	zx303DeviceAdministrator zx303DeviceAdministrator.Administrator,
+	zx303DeviceAuthenticator zx303DeviceAuthenticator.Authenticator,
 ) *server {
 
 	return &server{
@@ -31,7 +31,7 @@ func New(
 		IPAddress:                IPAddress,
 		MessageHandlers:          make(map[serverMessage.Type]serverMessageHandler.Handler),
 		done:                     make(chan bool),
-		zx303DeviceAdministrator: zx303DeviceAdministrator,
+		zx303DeviceAuthenticator: zx303DeviceAuthenticator,
 	}
 }
 
@@ -63,7 +63,7 @@ func (s *server) Start() error {
 		}
 
 		newClient := client.New(
-			s.zx303DeviceAdministrator,
+			s.zx303DeviceAuthenticator,
 			c,
 			s.MessageHandlers,
 		)

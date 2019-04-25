@@ -55,3 +55,11 @@ type UnauthenticatedCommunication struct {
 func (e UnauthenticatedCommunication) Error() string {
 	return "unauthenticated communication: " + strings.Join(e.Reasons, "; ")
 }
+
+type AuthenticationError struct {
+	Reasons []string
+}
+
+func (e AuthenticationError) Error() string {
+	return "authentication error: " + strings.Join(e.Reasons, "; ")
+}
