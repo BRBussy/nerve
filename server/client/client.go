@@ -5,9 +5,10 @@ import (
 	"fmt"
 	nerveException "gitlab.com/iotTracker/nerve/exception"
 	"gitlab.com/iotTracker/nerve/log"
-	clientException "gitlab.com/iotTracker/nerve/server/Client/exception"
+	clientException "gitlab.com/iotTracker/nerve/server/client/exception"
 	serverMessage "gitlab.com/iotTracker/nerve/server/message"
 	serverMessageHandler "gitlab.com/iotTracker/nerve/server/message/handler"
+	serverSession "gitlab.com/iotTracker/nerve/server/session"
 	"net"
 	"time"
 )
@@ -27,7 +28,7 @@ type Client struct {
 	socket           net.Conn
 	outgoingMessages chan serverMessage.Message
 	messageHandlers  map[serverMessage.Type]serverMessageHandler.Handler
-	loggedIn         bool
+	serverSession    serverSession.Session
 	stop             chan bool
 	stopTX           chan bool
 	stopRX           bool
@@ -146,24 +147,25 @@ Comms:
 					continue
 				}
 				// handle the login message
-				response, err = c.messageHandlers[inMessage.Type].Handle(&serverMessageHandler.HandleRequest{
-					Client:  c,
-					Message: *inMessage,
-				})
+				response, err = c.messageHandlers[inMessage.Type].Handle(
+					&c.serverSession,
+					&serverMessageHandler.HandleRequest{
+						Message: *inMessage,
+					})
 				if err != nil {
 					log.Warn(err.Error())
 					c.stop <- true
 					continue
 				}
 				// if the client has not been set to logged in stop the client connection
-				if !c.loggedIn {
+				if !c.serverSession.LoggedIn {
 					log.Warn(nerveException.Unexpected{Reasons: []string{
 						"client still not logged in",
 					}}.Error())
 					c.stop <- true
 					continue
 				}
-			} else if !c.loggedIn {
+			} else if !c.serverSession.LoggedIn {
 				// otherwise this is not a Login Message and the client is not logged in,
 				// stop the client connection
 				log.Warn(clientException.UnauthenticatedCommunication{Reasons: []string{"device not logged in"}}.Error())
@@ -177,10 +179,11 @@ Comms:
 					continue
 				}
 				// handle the message
-				response, err = c.messageHandlers[inMessage.Type].Handle(&serverMessageHandler.HandleRequest{
-					Client:  c,
-					Message: *inMessage,
-				})
+				response, err = c.messageHandlers[inMessage.Type].Handle(
+					&c.serverSession,
+					&serverMessageHandler.HandleRequest{
+						Message: *inMessage,
+					})
 				if err != nil {
 					log.Warn(err.Error())
 					continue
