@@ -1,8 +1,10 @@
 package login
 
 import (
+	"gitlab.com/iotTracker/brain/search/identifier/device/zx303"
 	zx303DeviceAuthenticator "gitlab.com/iotTracker/brain/tracker/device/zx303/authenticator"
 	"gitlab.com/iotTracker/nerve/log"
+	clientException "gitlab.com/iotTracker/nerve/server/client/exception"
 	serverMessage "gitlab.com/iotTracker/nerve/server/message"
 	serverMessageHandler "gitlab.com/iotTracker/nerve/server/message/handler"
 	serverMessageHandlerException "gitlab.com/iotTracker/nerve/server/message/handler/exception"
@@ -43,6 +45,19 @@ func (h *handler) Handle(serverSession *serverSession.Session, request *serverMe
 	}
 
 	log.Info("Log in Device with IMEI: ", request.Message.Data[:16])
+
+	loginResponse, err := h.zx303DeviceAuthenticator.Login(&zx303DeviceAuthenticator.LoginRequest{
+		Identifier: zx303.Identifier{
+			IMEI: request.Message.Data[:16],
+		},
+	})
+	if err != nil {
+		return nil, clientException.AuthenticationError{Reasons: []string{err.Error()}}
+	}
+	if !loginResponse.Result {
+		return nil, clientException.AuthenticationError{Reasons: []string{"login response false"}}
+	}
+	serverSession.LoggedIn = true
 
 	responseMessages := make([]serverMessage.Message, 0)
 
