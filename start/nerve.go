@@ -65,9 +65,10 @@ func main() {
 	Server := server.New(
 		"7018",
 		"0.0.0.0",
-		zx303DeviceAuthenticator,
 	)
-	Server.RegisterMessageHandler(ServerMessage.Login, ServerLoginMessageHandler.New())
+	Server.RegisterMessageHandler(ServerMessage.Login, ServerLoginMessageHandler.New(
+		zx303DeviceAuthenticator,
+	))
 	Server.RegisterMessageHandler(ServerMessage.Heartbeat, ServerHeartbeatMessageHandler.New())
 	Server.RegisterMessageHandler(ServerMessage.GPSPosition, ServerGPSPositionMessageHandler.New(
 		brainQueueProducer,

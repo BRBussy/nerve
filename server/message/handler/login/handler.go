@@ -1,6 +1,7 @@
 package login
 
 import (
+	zx303DeviceAuthenticator "gitlab.com/iotTracker/brain/tracker/device/zx303/authenticator"
 	"gitlab.com/iotTracker/nerve/log"
 	serverMessage "gitlab.com/iotTracker/nerve/server/message"
 	serverMessageHandler "gitlab.com/iotTracker/nerve/server/message/handler"
@@ -11,10 +12,15 @@ const SuccessData = "01"
 const FailureData = "44"
 
 type handler struct {
+	zx303DeviceAuthenticator zx303DeviceAuthenticator.Authenticator
 }
 
-func New() serverMessageHandler.Handler {
-	return &handler{}
+func New(
+	zx303DeviceAuthenticator zx303DeviceAuthenticator.Authenticator,
+) serverMessageHandler.Handler {
+	return &handler{
+		zx303DeviceAuthenticator: zx303DeviceAuthenticator,
+	}
 }
 
 func (h *handler) ValidateHandleRequest(request *serverMessageHandler.HandleRequest) error {

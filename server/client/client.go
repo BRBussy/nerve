@@ -3,10 +3,9 @@ package client
 import (
 	"bufio"
 	"fmt"
-	zx303DeviceIdentifier "gitlab.com/iotTracker/brain/search/identifier/device/zx303"
-	zx303DeviceAuthenticator "gitlab.com/iotTracker/brain/tracker/device/zx303/authenticator"
+	nerveException "gitlab.com/iotTracker/nerve/exception"
 	"gitlab.com/iotTracker/nerve/log"
-	clientException "gitlab.com/iotTracker/nerve/server/client/exception"
+	clientException "gitlab.com/iotTracker/nerve/server/Client/exception"
 	serverMessage "gitlab.com/iotTracker/nerve/server/message"
 	serverMessageHandler "gitlab.com/iotTracker/nerve/server/message/handler"
 	"net"
@@ -24,34 +23,31 @@ const (
 	MaxMessageSize = 1024
 )
 
-type client struct {
-	zx303DeviceAuthenticator zx303DeviceAuthenticator.Authenticator
-	socket                   net.Conn
-	outgoingMessages         chan serverMessage.Message
-	messageHandlers          map[serverMessage.Type]serverMessageHandler.Handler
-	loggedIn                 bool
-	stop                     chan bool
-	stopTX                   chan bool
-	stopRX                   bool
+type Client struct {
+	socket           net.Conn
+	outgoingMessages chan serverMessage.Message
+	messageHandlers  map[serverMessage.Type]serverMessageHandler.Handler
+	loggedIn         bool
+	stop             chan bool
+	stopTX           chan bool
+	stopRX           bool
 }
 
 func New(
-	zx303DeviceAuthenticator zx303DeviceAuthenticator.Authenticator,
 	socket net.Conn,
 	messageHandlers map[serverMessage.Type]serverMessageHandler.Handler,
-) *client {
-	return &client{
-		zx303DeviceAuthenticator: zx303DeviceAuthenticator,
-		socket:                   socket,
-		outgoingMessages:         make(chan serverMessage.Message),
-		messageHandlers:          messageHandlers,
-		stopTX:                   make(chan bool),
-		stopRX:                   false,
-		stop:                     make(chan bool),
+) *Client {
+	return &Client{
+		socket:           socket,
+		outgoingMessages: make(chan serverMessage.Message),
+		messageHandlers:  messageHandlers,
+		stopTX:           make(chan bool),
+		stopRX:           false,
+		stop:             make(chan bool),
 	}
 }
 
-func (c *client) Send(message serverMessage.Message) error {
+func (c *Client) Send(message serverMessage.Message) error {
 	messageBytes, err := message.Bytes()
 	if err != nil {
 		return clientException.MessageConversion{Reasons: []string{"message to bytes", err.Error()}}
@@ -62,7 +58,7 @@ func (c *client) Send(message serverMessage.Message) error {
 	return nil
 }
 
-func (c *client) HandleLifeCycle() {
+func (c *Client) HandleLifeCycle() {
 	heartbeatCountdownTimer := time.NewTimer(HeartbeatWait)
 LifeCycle:
 	for {
@@ -84,7 +80,7 @@ LifeCycle:
 	log.Info(fmt.Sprintf("%s lifecycle ended", c.socket.RemoteAddr().String()))
 }
 
-func (c *client) HandleTX() {
+func (c *Client) HandleTX() {
 	for {
 		select {
 		case outMessage, ok := <-c.outgoingMessages:
@@ -112,7 +108,7 @@ func (c *client) HandleTX() {
 	}
 }
 
-func (c *client) HandleRX() {
+func (c *Client) HandleRX() {
 
 	log.Info(fmt.Sprintf("serving %s", c.socket.RemoteAddr().String()))
 	reader := bufio.NewReaderSize(c.socket, MaxMessageSize)
@@ -134,45 +130,66 @@ Comms:
 			}
 			log.Info("IN: ", inMessage.String())
 
-			// if this message is a login message
+			var response *serverMessageHandler.HandleResponse
+
+			// if this is a log in message then we do not need to check that the client
+			// is logged in before handling the message
 			if inMessage.Type == serverMessage.Login {
-				loginResponse, err := c.zx303DeviceAuthenticator.Login(&zx303DeviceAuthenticator.LoginRequest{
-					Identifier: zx303DeviceIdentifier.Identifier{
-						IMEI: "123456",
-					},
+				// if there is no login handler stop the client connection
+				if c.messageHandlers[inMessage.Type] == nil {
+					log.Warn(clientException.AuthenticationError{Reasons: []string{
+						"device log in",
+						clientException.NoHandler{Message: *inMessage}.Error(),
+					}}.Error())
+					log.Warn(clientException.NoHandler{Message: *inMessage}.Error())
+					c.stop <- true
+					continue
+				}
+				// handle the login message
+				response, err = c.messageHandlers[inMessage.Type].Handle(&serverMessageHandler.HandleRequest{
+					Client:  c,
+					Message: *inMessage,
 				})
 				if err != nil {
-					log.Warn(clientException.AuthenticationError{Reasons: []string{"device log in", err.Error()}})
+					log.Warn(err.Error())
 					c.stop <- true
 					continue
 				}
-				if !loginResponse.Result {
-					log.Warn(clientException.AuthenticationError{Reasons: []string{"device log in result false"}})
+				// if the client has not been set to logged in stop the client connection
+				if !c.loggedIn {
+					log.Warn(nerveException.Unexpected{Reasons: []string{
+						"client still not logged in",
+					}}.Error())
 					c.stop <- true
 					continue
 				}
-
-				// log in the client device
-				c.loggedIn = true
-
 			} else if !c.loggedIn {
-				// otherwise if this message is not a logged in message, and the client is not logged in
-				// stop the client
-				log.Warn(clientException.UnauthenticatedCommunication{Reasons: []string{"device not logged in"}})
+				// otherwise this is not a Login Message and the client is not logged in,
+				// stop the client connection
+				log.Warn(clientException.UnauthenticatedCommunication{Reasons: []string{"device not logged in"}}.Error())
 				c.stop <- true
 				continue
+			} else {
+				// it is not a Login Message and the device is logged in
+				if c.messageHandlers[inMessage.Type] == nil {
+					// if there is no handler log a warning and carry on
+					log.Warn(clientException.NoHandler{Message: *inMessage}.Error())
+					continue
+				}
+				// handle the message
+				response, err = c.messageHandlers[inMessage.Type].Handle(&serverMessageHandler.HandleRequest{
+					Client:  c,
+					Message: *inMessage,
+				})
+				if err != nil {
+					log.Warn(err.Error())
+					continue
+				}
 			}
 
-			// otherwise, if there is a handler for this message type, handle the message
-			if c.messageHandlers[inMessage.Type] == nil {
-				log.Warn(clientException.NoHandler{Message: *inMessage}.Error())
-				continue
-			}
-			response, err := c.messageHandlers[inMessage.Type].Handle(&serverMessageHandler.HandleRequest{
-				Message: *inMessage,
-			})
-			if err != nil {
-				log.Warn(err.Error())
+			// if the response is nil do not attempt to send back response messages
+			if response == nil {
+				log.Warn(nerveException.Unexpected{Reasons: []string{"handler response is nil"}}.Error())
 				continue
 			}
 

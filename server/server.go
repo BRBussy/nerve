@@ -2,7 +2,6 @@ package server
 
 import (
 	"fmt"
-	zx303DeviceAuthenticator "gitlab.com/iotTracker/brain/tracker/device/zx303/authenticator"
 	"gitlab.com/iotTracker/nerve/log"
 	"gitlab.com/iotTracker/nerve/server/client"
 	serverException "gitlab.com/iotTracker/nerve/server/exception"
@@ -12,26 +11,23 @@ import (
 )
 
 type server struct {
-	Port                     string
-	IPAddress                string
-	done                     chan bool
-	listener                 net.Listener
-	MessageHandlers          map[serverMessage.Type]serverMessageHandler.Handler
-	zx303DeviceAuthenticator zx303DeviceAuthenticator.Authenticator
+	Port            string
+	IPAddress       string
+	done            chan bool
+	listener        net.Listener
+	MessageHandlers map[serverMessage.Type]serverMessageHandler.Handler
 }
 
 func New(
 	Port string,
 	IPAddress string,
-	zx303DeviceAuthenticator zx303DeviceAuthenticator.Authenticator,
 ) *server {
 
 	return &server{
-		Port:                     Port,
-		IPAddress:                IPAddress,
-		MessageHandlers:          make(map[serverMessage.Type]serverMessageHandler.Handler),
-		done:                     make(chan bool),
-		zx303DeviceAuthenticator: zx303DeviceAuthenticator,
+		Port:            Port,
+		IPAddress:       IPAddress,
+		MessageHandlers: make(map[serverMessage.Type]serverMessageHandler.Handler),
+		done:            make(chan bool),
 	}
 }
 
@@ -62,11 +58,7 @@ func (s *server) Start() error {
 			}
 		}
 
-		newClient := client.New(
-			s.zx303DeviceAuthenticator,
-			c,
-			s.MessageHandlers,
-		)
+		newClient := client.New(c, s.MessageHandlers)
 		go newClient.HandleRX()
 		go newClient.HandleTX()
 		go newClient.HandleLifeCycle()
