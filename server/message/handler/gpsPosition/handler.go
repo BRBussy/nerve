@@ -2,9 +2,9 @@ package gpsPosition
 
 import (
 	"fmt"
-	"gitlab.com/iotTracker/brain/search/identifier/device/zx303"
-	"gitlab.com/iotTracker/brain/tracker"
-	messagingGPSLocationMessage "gitlab.com/iotTracker/messaging/message/gpsLocation"
+	"gitlab.com/iotTracker/brain/search/identifier/id"
+	"gitlab.com/iotTracker/brain/tracker/zx303/reading/gps"
+	zx303GPSReadingMessage "gitlab.com/iotTracker/messaging/message/zx303/reading/gps"
 	messagingProducer "gitlab.com/iotTracker/messaging/producer"
 	"gitlab.com/iotTracker/nerve/log"
 	serverMessage "gitlab.com/iotTracker/nerve/server/message"
@@ -12,6 +12,7 @@ import (
 	serverMessageHandlerException "gitlab.com/iotTracker/nerve/server/message/handler/exception"
 	serverSession "gitlab.com/iotTracker/nerve/server/session"
 	"strconv"
+	"time"
 )
 
 type handler struct {
@@ -137,14 +138,22 @@ func (h *handler) Handle(serverSession *serverSession.Session, request *serverMe
 		heading,
 	))
 
-	if err := h.brainQueueProducer.Produce(messagingGPSLocationMessage.Message{
-		DeviceId: zx303.Identifier{
-			IMEI: serverSession.ZX303Device.IMEI,
+	if err := h.brainQueueProducer.Produce(zx303GPSReadingMessage.Message{
+		Reading: reading.Reading{
+			DeviceId: id.Identifier{
+				Id: serverSession.ZX303Device.Id,
+			},
+			OwnerPartyType:    serverSession.ZX303Device.OwnerPartyType,
+			OwnerId:           serverSession.ZX303Device.OwnerId,
+			AssignedPartyType: serverSession.ZX303Device.AssignedPartyType,
+			AssignedId:        serverSession.ZX303Device.AssignedId,
+			NoSatellites:      noSatellites,
+			TimeStamp:         time.Now().UTC().Unix(),
+			Latitude:          gpsLatitude,
+			Longitude:         gpsLongitude,
+			Speed:             speed,
+			Heading:           heading,
 		},
-		DeviceType: tracker.ZX303,
-		TimeStamp:  0,
-		Latitude:   gpsLatitude,
-		Longitude:  gpsLongitude,
 	}); err != nil {
 		return nil, serverMessageHandlerException.MessageProduction{Reasons: []string{err.Error()}}
 	}

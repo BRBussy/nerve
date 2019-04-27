@@ -33,8 +33,8 @@ import (
 func main() {
 	kafkaBrokers := flag.String("kafkaBrokers", "localhost:9092", "ipAddress:port of each kafka broker node (, separated)")
 	brainUrl := flag.String("brainUrl", "http://localhost:9011/api", "url of brain service")
-	brainAPIUserUsername := flag.String("brainAPIUserUsername", "47506268-cc8e-4291-a08f-bf063cbf3c1c", "username of brain api user")
-	brainAPIUserPassword := flag.String("brainAPIUserPassword", "7j69hqiGQcaZOaBN3zEyzl7pd7JUj5pIZr7x0aj5SxA=", "password for brain api user")
+	brainAPIUserUsername := flag.String("brainAPIUserUsername", "f5866326-1bf0-44d4-8add-1e60c32bf175", "username of brain api user")
+	brainAPIUserPassword := flag.String("brainAPIUserPassword", "m7k8C7/PTI2OyHzSdWtdsr5bD1cZUkIlCboAvzGIHA8=", "password for brain api user")
 	flag.Parse()
 
 	// set up kafka messaging
