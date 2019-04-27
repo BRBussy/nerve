@@ -3,7 +3,7 @@ package gpsPosition
 import (
 	"fmt"
 	"gitlab.com/iotTracker/brain/search/identifier/id"
-	"gitlab.com/iotTracker/brain/tracker/zx303/reading/gps"
+	zx303GPSReading "gitlab.com/iotTracker/brain/tracker/zx303/reading/gps"
 	zx303GPSReadingMessage "gitlab.com/iotTracker/messaging/message/zx303/reading/gps"
 	messagingProducer "gitlab.com/iotTracker/messaging/producer"
 	"gitlab.com/iotTracker/nerve/log"
@@ -139,7 +139,7 @@ func (h *handler) Handle(serverSession *serverSession.Session, request *serverMe
 	))
 
 	if err := h.brainQueueProducer.Produce(zx303GPSReadingMessage.Message{
-		Reading: reading.Reading{
+		Reading: zx303GPSReading.Reading{
 			DeviceId: id.Identifier{
 				Id: serverSession.ZX303Device.Id,
 			},

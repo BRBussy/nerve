@@ -76,7 +76,9 @@ func main() {
 	Server.RegisterMessageHandler(ServerMessage.GPSPosition2, ServerGPSPositionMessageHandler.New(
 		brainQueueProducer,
 	))
-	Server.RegisterMessageHandler(ServerMessage.Status, ServerStatusMessageHandler.New())
+	Server.RegisterMessageHandler(ServerMessage.Status, ServerStatusMessageHandler.New(
+		brainQueueProducer,
+	))
 	Server.RegisterMessageHandler(ServerMessage.Hibernation, ServerHibernationMessageHandler.New())
 	Server.RegisterMessageHandler(ServerMessage.FactorySettingsRestored, ServerFactorySettingsRestoredMessageHandler.New())
 	Server.RegisterMessageHandler(ServerMessage.OfflineWIFIData, ServerOfflineWIFIDataMessageHandler.New())

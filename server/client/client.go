@@ -19,7 +19,7 @@ const (
 	// Time allowed between heartbeats
 	// if no heartbeat received in after this time the connection
 	// is terminated
-	HeartbeatWait = 30 * time.Second
+	HeartbeatWait = 180 * time.Second
 	// Maximum message size allowed from peer.
 	MaxMessageSize = 1024
 )
