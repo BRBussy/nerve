@@ -2,6 +2,9 @@ package gpsPosition
 
 import (
 	"fmt"
+	"gitlab.com/iotTracker/brain/search/identifier/device/zx303"
+	"gitlab.com/iotTracker/brain/tracker/device"
+	messagingGPSLocationMessage "gitlab.com/iotTracker/messaging/message/gpsLocation"
 	messagingProducer "gitlab.com/iotTracker/messaging/producer"
 	"gitlab.com/iotTracker/nerve/log"
 	serverMessage "gitlab.com/iotTracker/nerve/server/message"
@@ -134,7 +137,15 @@ func (h *handler) Handle(serverSession *serverSession.Session, request *serverMe
 		heading,
 	))
 
-	if err := h.brainQueueProducer.Produce([]byte("aweh gps")); err != nil {
+	if err := h.brainQueueProducer.Produce(messagingGPSLocationMessage.Message{
+		DeviceId: zx303.Identifier{
+			IMEI: serverSession.ZX303Device.IMEI,
+		},
+		DeviceType: device.ZX303,
+		TimeStamp:  0,
+		Latitude:   gpsLatitude,
+		Longitude:  gpsLongitude,
+	}); err != nil {
 		return nil, serverMessageHandlerException.MessageProduction{Reasons: []string{err.Error()}}
 	}
 

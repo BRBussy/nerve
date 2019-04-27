@@ -57,7 +57,10 @@ func (h *handler) Handle(serverSession *serverSession.Session, request *serverMe
 	if !loginResponse.Result {
 		return nil, clientException.AuthenticationError{Reasons: []string{"login response false"}}
 	}
+
+	// set server session to logged in and set device
 	serverSession.LoggedIn = true
+	serverSession.ZX303Device = loginResponse.ZX303
 
 	responseMessages := make([]serverMessage.Message, 0)
 
