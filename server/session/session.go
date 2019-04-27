@@ -1,6 +1,6 @@
 package session
 
-import "gitlab.com/iotTracker/brain/tracker/device/zx303"
+import "gitlab.com/iotTracker/brain/tracker/zx303"
 
 type Session struct {
 	LoggedIn    bool

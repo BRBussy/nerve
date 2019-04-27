@@ -2,7 +2,7 @@ package login
 
 import (
 	"gitlab.com/iotTracker/brain/search/identifier/device/zx303"
-	zx303DeviceAuthenticator "gitlab.com/iotTracker/brain/tracker/device/zx303/authenticator"
+	zx303DeviceAuthenticator "gitlab.com/iotTracker/brain/tracker/zx303/authenticator"
 	"gitlab.com/iotTracker/nerve/log"
 	clientException "gitlab.com/iotTracker/nerve/server/client/exception"
 	serverMessage "gitlab.com/iotTracker/nerve/server/message"

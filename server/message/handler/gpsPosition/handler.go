@@ -3,7 +3,7 @@ package gpsPosition
 import (
 	"fmt"
 	"gitlab.com/iotTracker/brain/search/identifier/device/zx303"
-	"gitlab.com/iotTracker/brain/tracker/device"
+	"gitlab.com/iotTracker/brain/tracker"
 	messagingGPSLocationMessage "gitlab.com/iotTracker/messaging/message/gpsLocation"
 	messagingProducer "gitlab.com/iotTracker/messaging/producer"
 	"gitlab.com/iotTracker/nerve/log"
@@ -141,7 +141,7 @@ func (h *handler) Handle(serverSession *serverSession.Session, request *serverMe
 		DeviceId: zx303.Identifier{
 			IMEI: serverSession.ZX303Device.IMEI,
 		},
-		DeviceType: device.ZX303,
+		DeviceType: tracker.ZX303,
 		TimeStamp:  0,
 		Latitude:   gpsLatitude,
 		Longitude:  gpsLongitude,
