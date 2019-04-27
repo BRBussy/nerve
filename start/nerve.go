@@ -57,6 +57,12 @@ func main() {
 	}
 	log.Info("successfully logged into brain")
 
+	go func() {
+		if err := jsonRpcClient.MaintainLogin(); err != nil {
+			log.Fatal("error maintaining json rpc client login: ", err.Error())
+		}
+	}()
+
 	zx303DeviceAuthenticator := zx303DeviceJsonRpcAuthenticator.New(
 		jsonRpcClient,
 	)
