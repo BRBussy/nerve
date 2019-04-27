@@ -29,6 +29,7 @@ type Client struct {
 	outgoingMessages chan serverMessage.Message
 	messageHandlers  map[serverMessage.Type]serverMessageHandler.Handler
 	serverSession    serverSession.Session
+	heartbeat        chan bool
 	stop             chan bool
 	stopTX           chan bool
 	stopRX           bool
@@ -42,6 +43,7 @@ func New(
 		socket:           socket,
 		outgoingMessages: make(chan serverMessage.Message),
 		messageHandlers:  messageHandlers,
+		heartbeat:        make(chan bool),
 		stopTX:           make(chan bool),
 		stopRX:           false,
 		stop:             make(chan bool),
@@ -70,6 +72,9 @@ LifeCycle:
 			c.stopRX = true
 			c.socket.Close()
 			break LifeCycle
+
+		case <-c.heartbeat:
+			heartbeatCountdownTimer.Reset(HeartbeatWait)
 
 		case <-c.stop:
 			c.stopTX <- true
@@ -131,21 +136,19 @@ Comms:
 			}
 			log.Info("IN: ", inMessage.String())
 
+			// if the client is not logged in and this message is not of type Login terminate the connection
+			if !(c.serverSession.LoggedIn || inMessage.Type == serverMessage.Login) {
+				log.Warn(clientException.UnauthenticatedCommunication{Reasons: []string{"device not logged in"}}.Error())
+				c.stop <- true
+				continue
+			}
+
 			var response *serverMessageHandler.HandleResponse
 
 			// if this is a log in message then we do not need to check that the client
 			// is logged in before handling the message
-			if inMessage.Type == serverMessage.Login {
-				// if there is no login handler stop the client connection
-				if c.messageHandlers[inMessage.Type] == nil {
-					log.Warn(clientException.AuthenticationError{Reasons: []string{
-						"device log in",
-						clientException.NoHandler{Message: *inMessage}.Error(),
-					}}.Error())
-					log.Warn(clientException.NoHandler{Message: *inMessage}.Error())
-					c.stop <- true
-					continue
-				}
+			switch inMessage.Type {
+			case serverMessage.Login:
 				// handle the login message
 				response, err = c.messageHandlers[inMessage.Type].Handle(
 					&c.serverSession,
@@ -165,20 +168,31 @@ Comms:
 					c.stop <- true
 					continue
 				}
-			} else if !c.serverSession.LoggedIn {
-				// otherwise this is not a Login Message and the client is not logged in,
-				// stop the client connection
-				log.Warn(clientException.UnauthenticatedCommunication{Reasons: []string{"device not logged in"}}.Error())
-				c.stop <- true
-				continue
-			} else {
+
+			case serverMessage.Heartbeat:
+				// notify the lifecycle monitor of the heartbeat
+				c.heartbeat <- true
+				// handle the heartbeat message
+				response, err = c.messageHandlers[inMessage.Type].Handle(
+					&c.serverSession,
+					&serverMessageHandler.HandleRequest{
+						Message: *inMessage,
+					})
+				if err != nil {
+					log.Warn(err.Error())
+					c.stop <- true
+					continue
+				}
+
+			default:
 				// it is not a Login Message and the device is logged in
 				if c.messageHandlers[inMessage.Type] == nil {
 					// if there is no handler log a warning and carry on
 					log.Warn(clientException.NoHandler{Message: *inMessage}.Error())
 					continue
 				}
-				// handle the message
+
+				// otherwise handle the message
 				response, err = c.messageHandlers[inMessage.Type].Handle(
 					&c.serverSession,
 					&serverMessageHandler.HandleRequest{
