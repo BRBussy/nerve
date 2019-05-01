@@ -34,6 +34,7 @@ import (
 	"strings"
 
 	zx303TaskSubmittedMessageHandler "gitlab.com/iotTracker/nerve/messaging/message/handler/zx303/task/submitted"
+	zx303TaskTransitionedMessageHandler "gitlab.com/iotTracker/nerve/messaging/message/handler/zx303/task/transitioned"
 )
 
 func main() {
@@ -85,6 +86,10 @@ func main() {
 		"nerveBroadcast",
 		[]messagingMessageHandler.Handler{
 			zx303TaskSubmittedMessageHandler.New(
+				messagingHub,
+				zx303TaskAdministrator,
+			),
+			zx303TaskTransitionedMessageHandler.New(
 				messagingHub,
 				zx303TaskAdministrator,
 			),

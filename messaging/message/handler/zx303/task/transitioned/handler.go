@@ -105,20 +105,8 @@ func (h *handler) HandleMessage(message messagingMessage.Message) error {
 	// get the pending step that should be handled by the client
 	pendingStep, pendingStepIdx, err := taskSubmittedMessage.Task.PendingStep()
 	if err != nil {
-		// fail the task at an indeterminate step
-		if _, err := h.taskAdministrator.FailTask(&zx303TaskAdministrator.FailTaskRequest{
-			ZX303TaskIdentifier: id.Identifier{
-				Id: taskSubmittedMessage.Task.Id,
-			},
-			FailedStepIdx: pendingStepIdx,
-		}); err != nil {
-			return nerveException.Unexpected{Reasons: []string{
-				"could not fail task",
-				err.Error(),
-				"could not get tasks pending step",
-			}}
-		}
-		return nerveException.Unexpected{Reasons: []string{"could not get tasks pending step", err.Error()}}
+		// there is no pending step, nothing to give to client to handle
+		return nil
 	}
 
 	// give the pending step to the client to be handled

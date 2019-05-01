@@ -275,8 +275,10 @@ Comms:
 func (c *Client) HandleTaskStep(step zx303TaskStep.Step) (zx303TaskStep.Status, error) {
 	switch step.Type {
 	case zx303TaskStep.SendResetCommand:
-		log.Info("send reset command!!!")
 		return zx303TaskStep.Finished, nil
+
+	case zx303TaskStep.WaitForReconnect:
+		return zx303TaskStep.Executing, nil
 
 	default:
 		return "", clientException.HandlingTaskStep{Reasons: []string{"invalid step type", string(step.Type)}}
