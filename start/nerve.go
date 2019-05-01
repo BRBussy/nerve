@@ -10,6 +10,7 @@ import (
 	basicJsonRpcClient "gitlab.com/iotTracker/brain/communication/jsonRpc/client/basic"
 	authJsonRpcAdaptor "gitlab.com/iotTracker/brain/security/authorization/service/adaptor/jsonRpc"
 	zx303DeviceJsonRpcAuthenticator "gitlab.com/iotTracker/brain/tracker/zx303/authenticator/jsonRpc"
+	zx303TaskJsonRpcAdministrator "gitlab.com/iotTracker/brain/tracker/zx303/task/administrator/jsonRpc"
 	"gitlab.com/iotTracker/nerve/log"
 	"gitlab.com/iotTracker/nerve/server"
 	ServerMessage "gitlab.com/iotTracker/nerve/server/message"
@@ -42,6 +43,28 @@ func main() {
 	brainAPIUserPassword := flag.String("brainAPIUserPassword", "m7k8C7/PTI2OyHzSdWtdsr5bD1cZUkIlCboAvzGIHA8=", "password for brain api user")
 	flag.Parse()
 
+	jsonRpcClient := basicJsonRpcClient.New(*brainUrl)
+	if err := jsonRpcClient.Login(authJsonRpcAdaptor.LoginRequest{
+		UsernameOrEmailAddress: *brainAPIUserUsername,
+		Password:               *brainAPIUserPassword,
+	}); err != nil {
+		log.Fatal("unable to log into brain: " + err.Error())
+	}
+	log.Info("successfully logged into brain")
+
+	go func() {
+		if err := jsonRpcClient.MaintainLogin(); err != nil {
+			log.Fatal("error maintaining json rpc client login: ", err.Error())
+		}
+	}()
+
+	zx303DeviceAuthenticator := zx303DeviceJsonRpcAuthenticator.New(
+		jsonRpcClient,
+	)
+	zx303TaskAdministrator := zx303TaskJsonRpcAdministrator.New(
+		jsonRpcClient,
+	)
+
 	kafkaBrokerNodes := strings.Split(*kafkaBrokers, ",")
 
 	// create a messaging hub
@@ -63,6 +86,7 @@ func main() {
 		[]messagingMessageHandler.Handler{
 			zx303TaskSubmittedMessageHandler.New(
 				messagingHub,
+				zx303TaskAdministrator,
 			),
 		},
 	)
@@ -71,25 +95,6 @@ func main() {
 			log.Fatal(err.Error())
 		}
 	}()
-
-	jsonRpcClient := basicJsonRpcClient.New(*brainUrl)
-	if err := jsonRpcClient.Login(authJsonRpcAdaptor.LoginRequest{
-		UsernameOrEmailAddress: *brainAPIUserUsername,
-		Password:               *brainAPIUserPassword,
-	}); err != nil {
-		log.Fatal("unable to log into brain: " + err.Error())
-	}
-	log.Info("successfully logged into brain")
-
-	go func() {
-		if err := jsonRpcClient.MaintainLogin(); err != nil {
-			log.Fatal("error maintaining json rpc client login: ", err.Error())
-		}
-	}()
-
-	zx303DeviceAuthenticator := zx303DeviceJsonRpcAuthenticator.New(
-		jsonRpcClient,
-	)
 
 	// set up  server
 	Server := server.New(
