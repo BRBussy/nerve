@@ -1,8 +1,8 @@
 package handler
 
 import (
+	serverSession "gitlab.com/iotTracker/nerve/server/client/session"
 	serverMessage "gitlab.com/iotTracker/nerve/server/message"
-	serverSession "gitlab.com/iotTracker/nerve/server/session"
 )
 
 type Handler interface {

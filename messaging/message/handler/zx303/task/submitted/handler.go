@@ -1,19 +1,28 @@
 package submitted
 
 import (
+	messagingClient "gitlab.com/iotTracker/messaging/client"
 	messagingException "gitlab.com/iotTracker/messaging/exception"
+	messagingHub "gitlab.com/iotTracker/messaging/hub"
 	messagingMessage "gitlab.com/iotTracker/messaging/message"
 	messagingMessageHandler "gitlab.com/iotTracker/messaging/message/handler"
+	messageHandlerException "gitlab.com/iotTracker/messaging/message/handler/exception"
 	zx303TaskSubmittedMessage "gitlab.com/iotTracker/messaging/message/zx303/task/submitted"
 	nerveException "gitlab.com/iotTracker/nerve/exception"
 	"gitlab.com/iotTracker/nerve/log"
+	zx303Client "gitlab.com/iotTracker/nerve/server/client"
 )
 
 type handler struct {
+	MessagingHub messagingHub.Hub
 }
 
-func New() messagingMessageHandler.Handler {
-	return &handler{}
+func New(
+	MessagingHub messagingHub.Hub,
+) messagingMessageHandler.Handler {
+	return &handler{
+		MessagingHub: MessagingHub,
+	}
 }
 
 func (h *handler) WantsMessage(message messagingMessage.Message) bool {
@@ -44,6 +53,21 @@ func (h *handler) HandleMessage(message messagingMessage.Message) error {
 	}
 
 	log.Info("handle task submitted message!", taskSubmittedMessage)
+
+	// get client from messaging hub
+	client, err := h.MessagingHub.GetClient(messagingClient.Identifier{
+		Type: messagingClient.ZX303,
+		Id:   taskSubmittedMessage.Task.DeviceId.Id,
+	})
+	if err != nil {
+		return messageHandlerException.Handling{Reasons: []string{"getting client", err.Error()}}
+	}
+
+	// cast to xz303 server client
+	_, ok = client.(*zx303Client.Client)
+	if !ok {
+		return nerveException.Unexpected{Reasons: []string{"could not cast client to zx303Client.Client"}}
+	}
 
 	return nil
 }

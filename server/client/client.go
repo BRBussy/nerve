@@ -4,14 +4,15 @@ import (
 	"bufio"
 	"fmt"
 	messagingClient "gitlab.com/iotTracker/messaging/client"
+	messagingHub "gitlab.com/iotTracker/messaging/hub"
 	messagingMessage "gitlab.com/iotTracker/messaging/message"
 	zx303TransmitMessage "gitlab.com/iotTracker/messaging/message/zx303/transmit"
 	nerveException "gitlab.com/iotTracker/nerve/exception"
 	"gitlab.com/iotTracker/nerve/log"
 	clientException "gitlab.com/iotTracker/nerve/server/client/exception"
+	serverSession "gitlab.com/iotTracker/nerve/server/client/session"
 	serverMessage "gitlab.com/iotTracker/nerve/server/message"
 	serverMessageHandler "gitlab.com/iotTracker/nerve/server/message/handler"
-	serverSession "gitlab.com/iotTracker/nerve/server/session"
 	"net"
 	"time"
 )
@@ -28,6 +29,7 @@ const (
 )
 
 type Client struct {
+	messagingHub     messagingHub.Hub
 	socket           net.Conn
 	outgoingMessages chan serverMessage.Message
 	messageHandlers  map[serverMessage.Type]serverMessageHandler.Handler
@@ -41,6 +43,7 @@ type Client struct {
 func New(
 	socket net.Conn,
 	messageHandlers map[serverMessage.Type]serverMessageHandler.Handler,
+	messagingHub messagingHub.Hub,
 ) *Client {
 	return &Client{
 		socket:           socket,
@@ -50,6 +53,7 @@ func New(
 		stopTX:           make(chan bool),
 		stopRX:           false,
 		stop:             make(chan bool),
+		messagingHub:     messagingHub,
 	}
 }
 
@@ -196,6 +200,16 @@ Comms:
 					continue
 				}
 
+				// register client with messaging hub
+				if err := c.messagingHub.RegisterClient(c); err != nil {
+					log.Warn(nerveException.Unexpected{Reasons: []string{
+						"registering client with hub",
+						err.Error(),
+					}})
+					c.stop <- true
+					continue
+				}
+
 			case serverMessage.Heartbeat:
 				// notify the lifecycle monitor of the heartbeat
 				c.heartbeat <- true
@@ -254,3 +268,7 @@ Comms:
 	}
 	log.Info(fmt.Sprintf("connection with %s terminated", c.socket.RemoteAddr().String()))
 }
+
+//func (c *Client) HandleTaskStep(step zx303TaskStep.Step) error {
+//
+//}

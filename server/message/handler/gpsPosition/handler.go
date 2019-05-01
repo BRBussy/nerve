@@ -7,10 +7,10 @@ import (
 	zx303GPSReadingMessage "gitlab.com/iotTracker/messaging/message/zx303/reading/gps"
 	messagingProducer "gitlab.com/iotTracker/messaging/producer"
 	"gitlab.com/iotTracker/nerve/log"
+	serverSession "gitlab.com/iotTracker/nerve/server/client/session"
 	serverMessage "gitlab.com/iotTracker/nerve/server/message"
 	serverMessageHandler "gitlab.com/iotTracker/nerve/server/message/handler"
 	serverMessageHandlerException "gitlab.com/iotTracker/nerve/server/message/handler/exception"
-	serverSession "gitlab.com/iotTracker/nerve/server/session"
 	"strconv"
 	"time"
 )

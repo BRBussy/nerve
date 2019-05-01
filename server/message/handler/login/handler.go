@@ -3,12 +3,12 @@ package login
 import (
 	"gitlab.com/iotTracker/brain/search/identifier/device/zx303"
 	zx303DeviceAuthenticator "gitlab.com/iotTracker/brain/tracker/zx303/authenticator"
-	"gitlab.com/iotTracker/nerve/log"
+	messagingHub "gitlab.com/iotTracker/messaging/hub"
 	clientException "gitlab.com/iotTracker/nerve/server/client/exception"
+	serverSession "gitlab.com/iotTracker/nerve/server/client/session"
 	serverMessage "gitlab.com/iotTracker/nerve/server/message"
 	serverMessageHandler "gitlab.com/iotTracker/nerve/server/message/handler"
 	serverMessageHandlerException "gitlab.com/iotTracker/nerve/server/message/handler/exception"
-	serverSession "gitlab.com/iotTracker/nerve/server/session"
 )
 
 const SuccessData = "01"
@@ -16,6 +16,7 @@ const FailureData = "44"
 
 type handler struct {
 	zx303DeviceAuthenticator zx303DeviceAuthenticator.Authenticator
+	messagingHub             messagingHub.Hub
 }
 
 func New(
@@ -44,8 +45,6 @@ func (h *handler) Handle(serverSession *serverSession.Session, request *serverMe
 		return nil, err
 	}
 
-	log.Info("Log in Device with IMEI: ", request.Message.Data[:16])
-
 	loginResponse, err := h.zx303DeviceAuthenticator.Login(&zx303DeviceAuthenticator.LoginRequest{
 		Identifier: zx303.Identifier{
 			IMEI: request.Message.Data[:16],
@@ -70,11 +69,11 @@ func (h *handler) Handle(serverSession *serverSession.Session, request *serverMe
 			Data:       SuccessData,
 			DataLength: 1,
 		})
-		responseMessages = append(responseMessages, serverMessage.Message{
-			Type:       serverMessage.ManualPosition,
-			Data:       "",
-			DataLength: 1,
-		})
+		//responseMessages = append(responseMessages, serverMessage.Message{
+		//	Type:       serverMessage.ManualPosition,
+		//	Data:       "",
+		//	DataLength: 1,
+		//})
 	} else {
 		responseMessages = append(responseMessages, serverMessage.Message{
 			Type:       serverMessage.Login,

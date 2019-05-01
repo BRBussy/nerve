@@ -58,12 +58,14 @@ func (s *server) Start() error {
 			case <-s.done:
 				return nil
 			default:
-				log.Error(serverException.AcceptConnection{Reasons: []string{"", err.Error()}}.Error())
+				log.Error(serverException.AcceptConnection{Reasons: []string{err.Error()}}.Error())
 			}
 		}
 
-		newClient := client.New(c, s.MessageHandlers)
-		s.MessagingHub.RegisterClient(newClient)
+		newClient := client.New(
+			c, s.MessageHandlers,
+			s.MessagingHub,
+		)
 		go newClient.HandleRX()
 		go newClient.HandleTX()
 		go newClient.HandleLifeCycle()

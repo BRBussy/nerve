@@ -61,7 +61,9 @@ func main() {
 		kafkaBrokerNodes,
 		"nerveBroadcast",
 		[]messagingMessageHandler.Handler{
-			zx303TaskSubmittedMessageHandler.New(),
+			zx303TaskSubmittedMessageHandler.New(
+				messagingHub,
+			),
 		},
 	)
 	go func() {

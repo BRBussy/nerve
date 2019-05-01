@@ -2,9 +2,9 @@ package chargerConnected
 
 import (
 	"gitlab.com/iotTracker/nerve/log"
+	serverSession "gitlab.com/iotTracker/nerve/server/client/session"
 	serverMessageHandler "gitlab.com/iotTracker/nerve/server/message/handler"
 	serverMessageHandlerException "gitlab.com/iotTracker/nerve/server/message/handler/exception"
-	serverSession "gitlab.com/iotTracker/nerve/server/session"
 )
 
 type handler struct {
