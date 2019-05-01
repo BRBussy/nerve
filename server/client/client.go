@@ -102,6 +102,7 @@ LifeCycle:
 			c.stopTX <- true
 			c.stopRX = true
 			c.socket.Close()
+			c.messagingHub.DeRegisterClient(c)
 			break LifeCycle
 
 		case <-c.heartbeat:
