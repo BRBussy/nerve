@@ -272,12 +272,15 @@ Comms:
 	log.Info(fmt.Sprintf("connection with %s terminated", c.socket.RemoteAddr().String()))
 }
 
-func (c *Client) HandleTaskStep(step zx303TaskStep.Step) error {
+func (c *Client) HandleTaskStep(step zx303TaskStep.Step) (zx303TaskStep.Status, error) {
 	switch step.Type {
 	case zx303TaskStep.SendResetCommand:
 		log.Info("send reset command!!!")
+		return zx303TaskStep.Finished, nil
+
 	default:
-		return clientException.HandlingTaskStep{Reasons: []string{"invalid step type", string(step.Type)}}
+		return "", clientException.HandlingTaskStep{Reasons: []string{"invalid step type", string(step.Type)}}
 	}
-	return nil
+
+	return "", clientException.HandlingTaskStep{Reasons: []string{"invalid step type", string(step.Type)}}
 }

@@ -1,4 +1,4 @@
-package submitted
+package transitioned
 
 import (
 	"gitlab.com/iotTracker/brain/search/identifier/id"
@@ -9,7 +9,7 @@ import (
 	messagingMessage "gitlab.com/iotTracker/messaging/message"
 	messagingMessageHandler "gitlab.com/iotTracker/messaging/message/handler"
 	messagingMessageHandlerException "gitlab.com/iotTracker/messaging/message/handler/exception"
-	zx303TaskSubmittedMessage "gitlab.com/iotTracker/messaging/message/zx303/task/submitted"
+	zx303TaskTransitionedMessage "gitlab.com/iotTracker/messaging/message/zx303/task/transitioned"
 	nerveException "gitlab.com/iotTracker/nerve/exception"
 	zx303Client "gitlab.com/iotTracker/nerve/server/client"
 )
@@ -30,7 +30,7 @@ func New(
 }
 
 func (h *handler) WantsMessage(message messagingMessage.Message) bool {
-	return message.Type() == messagingMessage.ZX303TaskSubmitted
+	return message.Type() == messagingMessage.ZX303TaskTransitioned
 }
 
 func (*handler) ValidateMessage(message messagingMessage.Message) error {
@@ -39,8 +39,8 @@ func (*handler) ValidateMessage(message messagingMessage.Message) error {
 	if message == nil {
 		reasonsInvalid = append(reasonsInvalid, "message is nil")
 	} else {
-		if _, ok := message.(zx303TaskSubmittedMessage.Message); !ok {
-			reasonsInvalid = append(reasonsInvalid, "cannot cast message to zx303TaskSubmittedMessage.Message")
+		if _, ok := message.(zx303TaskTransitionedMessage.Message); !ok {
+			reasonsInvalid = append(reasonsInvalid, "cannot cast message to zx303TaskTransitionedMessage.Message")
 		}
 	}
 
@@ -55,9 +55,9 @@ func (h *handler) HandleMessage(message messagingMessage.Message) error {
 	if err := h.ValidateMessage(message); err != nil {
 		return err
 	}
-	taskSubmittedMessage, ok := message.(zx303TaskSubmittedMessage.Message)
+	taskSubmittedMessage, ok := message.(zx303TaskTransitionedMessage.Message)
 	if !ok {
-		return nerveException.Unexpected{Reasons: []string{"cannot cast message to zx303TaskSubmittedMessage.Message"}}
+		return nerveException.Unexpected{Reasons: []string{"cannot cast message to zx303TaskTransitionedMessage.Message"}}
 	}
 
 	// get client from messaging hub
