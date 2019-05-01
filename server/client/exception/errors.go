@@ -63,3 +63,11 @@ type AuthenticationError struct {
 func (e AuthenticationError) Error() string {
 	return "authentication error: " + strings.Join(e.Reasons, "; ")
 }
+
+type HandlingTaskStep struct {
+	Reasons []string
+}
+
+func (e HandlingTaskStep) Error() string {
+	return "error handling task step: " + strings.Join(e.Reasons, "; ")
+}

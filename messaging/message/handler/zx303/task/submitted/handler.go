@@ -9,7 +9,6 @@ import (
 	messageHandlerException "gitlab.com/iotTracker/messaging/message/handler/exception"
 	zx303TaskSubmittedMessage "gitlab.com/iotTracker/messaging/message/zx303/task/submitted"
 	nerveException "gitlab.com/iotTracker/nerve/exception"
-	"gitlab.com/iotTracker/nerve/log"
 	zx303Client "gitlab.com/iotTracker/nerve/server/client"
 )
 
@@ -32,8 +31,12 @@ func (h *handler) WantsMessage(message messagingMessage.Message) bool {
 func (*handler) ValidateMessage(message messagingMessage.Message) error {
 	reasonsInvalid := make([]string, 0)
 
-	if _, ok := message.(zx303TaskSubmittedMessage.Message); !ok {
-		reasonsInvalid = append(reasonsInvalid, "cannot cast message to zx303GPSReadingMessage.Message")
+	if message == nil {
+		reasonsInvalid = append(reasonsInvalid, "message is nil")
+	} else {
+		if _, ok := message.(zx303TaskSubmittedMessage.Message); !ok {
+			reasonsInvalid = append(reasonsInvalid, "cannot cast message to zx303GPSReadingMessage.Message")
+		}
 	}
 
 	if len(reasonsInvalid) > 0 {
@@ -52,8 +55,6 @@ func (h *handler) HandleMessage(message messagingMessage.Message) error {
 		return nerveException.Unexpected{Reasons: []string{"cannot cast message to zx303TaskSubmittedMessage.Message"}}
 	}
 
-	log.Info("handle task submitted message!", taskSubmittedMessage)
-
 	// get client from messaging hub
 	client, err := h.MessagingHub.GetClient(messagingClient.Identifier{
 		Type: messagingClient.ZX303,
@@ -64,9 +65,18 @@ func (h *handler) HandleMessage(message messagingMessage.Message) error {
 	}
 
 	// cast to xz303 server client
-	_, ok = client.(*zx303Client.Client)
+	zx303ServerClient, ok := client.(*zx303Client.Client)
 	if !ok {
 		return nerveException.Unexpected{Reasons: []string{"could not cast client to zx303Client.Client"}}
+	}
+
+	pendingStep, err := taskSubmittedMessage.Task.PendingStep()
+	if err != nil {
+		return nerveException.Unexpected{Reasons: []string{"could not get tasks pending step", err.Error()}}
+	}
+
+	if err := zx303ServerClient.HandleTaskStep(*pendingStep); err != nil {
+		return messageHandlerException.Handling{Reasons: []string{"handling task step", err.Error()}}
 	}
 
 	return nil
