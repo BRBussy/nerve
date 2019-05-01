@@ -3,6 +3,7 @@ package client
 import (
 	"bufio"
 	"fmt"
+	"github.com/go-errors/errors"
 	zx303TaskStep "gitlab.com/iotTracker/brain/tracker/zx303/task/step"
 	messagingClient "gitlab.com/iotTracker/messaging/client"
 	messagingHub "gitlab.com/iotTracker/messaging/hub"
@@ -273,7 +274,7 @@ Comms:
 func (c *Client) HandleTaskStep(step zx303TaskStep.Step) error {
 	switch step.Type {
 	case zx303TaskStep.SendResetCommand:
-		log.Info("send reset command!!!")
+		return errors.New("fail!")
 	default:
 		return clientException.HandlingTaskStep{Reasons: []string{"invalid step type", string(step.Type)}}
 	}

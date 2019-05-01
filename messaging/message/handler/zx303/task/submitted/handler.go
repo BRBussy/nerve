@@ -66,8 +66,25 @@ func (h *handler) HandleMessage(message messagingMessage.Message) error {
 		Id:   taskSubmittedMessage.Task.DeviceId.Id,
 	})
 	if err != nil {
-		// client not in hub, may be registered to another nerve instance
-		return nil
+		// TODO: this should not fail. the client is not in hub, may be registered to another nerve instance
+		// TODO: remove this once there is something retrying tasks
+		// fail the task at an indeterminate step
+		if _, err := h.taskAdministrator.FailTask(&zx303TaskAdministrator.FailTaskRequest{
+			ZX303TaskIdentifier: id.Identifier{
+				Id: taskSubmittedMessage.Task.Id,
+			},
+			FailedStepIdx: -1,
+		}); err != nil {
+			return nerveException.Unexpected{Reasons: []string{
+				"could not fail task",
+				err.Error(),
+				"could not get client",
+			}}
+		}
+		return nerveException.Unexpected{Reasons: []string{
+			"could not get client",
+			err.Error(),
+		}}
 	}
 
 	// cast to xz303 server client
