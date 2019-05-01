@@ -91,7 +91,8 @@ func (c *Client) HandleTX() {
 		select {
 		case outMessage, ok := <-c.outgoingMessages:
 			if !ok {
-				log.Info("the outgoing messages channel has been closed")
+				log.Warn("the outgoing messages channel has been closed")
+				c.stop <- true
 				return
 			}
 			outMessageBytes, err := outMessage.Bytes()

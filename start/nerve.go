@@ -1,6 +1,9 @@
 package main
 
 import (
+	messagingConsumerInstance "gitlab.com/iotTracker/messaging/consumer/instance"
+	basicMessagingHub "gitlab.com/iotTracker/messaging/hub/basic"
+	messagingMessageHandler "gitlab.com/iotTracker/messaging/message/handler"
 	asyncMessagingProducer "gitlab.com/iotTracker/messaging/producer/sync"
 
 	"flag"
@@ -28,6 +31,8 @@ import (
 	"os"
 	"os/signal"
 	"strings"
+
+	zx303TaskSubmittedMessageHandler "gitlab.com/iotTracker/nerve/messaging/message/handler/zx303/task/submitted"
 )
 
 func main() {
@@ -37,16 +42,33 @@ func main() {
 	brainAPIUserPassword := flag.String("brainAPIUserPassword", "m7k8C7/PTI2OyHzSdWtdsr5bD1cZUkIlCboAvzGIHA8=", "password for brain api user")
 	flag.Parse()
 
-	// set up kafka messaging
 	kafkaBrokerNodes := strings.Split(*kafkaBrokers, ",")
+
+	// create a messaging hub
+	messagingHub := basicMessagingHub.New()
+
+	// create and start brainQueue producer
 	brainQueueProducer := asyncMessagingProducer.New(
 		kafkaBrokerNodes,
 		"brainQueue",
 	)
-	log.Info("Starting brainQueue producer")
 	if err := brainQueueProducer.Start(); err != nil {
 		log.Fatal(err.Error())
 	}
+
+	// create and start nerveBroadcast consumer
+	nerveBroadcastConsumer := messagingConsumerInstance.New(
+		kafkaBrokerNodes,
+		"nerveBroadcast",
+		[]messagingMessageHandler.Handler{
+			zx303TaskSubmittedMessageHandler.New(),
+		},
+	)
+	go func() {
+		if err := nerveBroadcastConsumer.Start(); err != nil {
+			log.Fatal(err.Error())
+		}
+	}()
 
 	jsonRpcClient := basicJsonRpcClient.New(*brainUrl)
 	if err := jsonRpcClient.Login(authJsonRpcAdaptor.LoginRequest{
@@ -71,6 +93,7 @@ func main() {
 	Server := server.New(
 		"7018",
 		"0.0.0.0",
+		messagingHub,
 	)
 	Server.RegisterMessageHandler(ServerMessage.Login, ServerLoginMessageHandler.New(
 		zx303DeviceAuthenticator,
