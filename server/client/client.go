@@ -54,6 +54,10 @@ func New(
 }
 
 func (c *Client) Send(message messagingMessage.Message) error {
+	if message.Type() != messagingMessage.ZX303Transmit {
+		return nerveException.Unexpected{Reasons: []string{"invalid message type provided to zx303 client send"}}
+	}
+
 	nerveServerMessage, ok := message.(zx303TransmitMessage.Message)
 	if !ok {
 		return nerveException.Unexpected{Reasons: []string{"could not cast messagingMessage to zx303TransmitMessage.Message"}}

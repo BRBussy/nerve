@@ -63,6 +63,7 @@ func (s *server) Start() error {
 		}
 
 		newClient := client.New(c, s.MessageHandlers)
+		s.MessagingHub.RegisterClient(newClient)
 		go newClient.HandleRX()
 		go newClient.HandleTX()
 		go newClient.HandleLifeCycle()
