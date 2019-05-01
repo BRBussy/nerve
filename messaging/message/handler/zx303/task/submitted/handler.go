@@ -3,6 +3,7 @@ package submitted
 import (
 	"gitlab.com/iotTracker/brain/search/identifier/id"
 	zx303TaskAdministrator "gitlab.com/iotTracker/brain/tracker/zx303/task/administrator"
+	zx303TaskStep "gitlab.com/iotTracker/brain/tracker/zx303/task/step"
 	messagingClient "gitlab.com/iotTracker/messaging/client"
 	messagingException "gitlab.com/iotTracker/messaging/exception"
 	messagingHub "gitlab.com/iotTracker/messaging/hub"
@@ -139,7 +140,16 @@ func (h *handler) HandleMessage(message messagingMessage.Message) error {
 		return messagingMessageHandlerException.Handling{Reasons: []string{"handling step", err.Error()}}
 	}
 
-	// TODO: transition task at this step
+	// transition step straight to finished
+	if _, err := h.taskAdministrator.TransitionTask(&zx303TaskAdministrator.TransitionTaskRequest{
+		ZX303TaskIdentifier: id.Identifier{
+			Id: taskSubmittedMessage.Task.Id,
+		},
+		StepIdx:       pendingStepIdx,
+		NewStepStatus: zx303TaskStep.Finished,
+	}); err != nil {
+		return nerveException.Unexpected{Reasons: []string{"transitioning step to finished", err.Error()}}
+	}
 
 	return nil
 }
