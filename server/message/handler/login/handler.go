@@ -5,7 +5,7 @@ import (
 	zx303DeviceAuthenticator "gitlab.com/iotTracker/brain/tracker/zx303/authenticator"
 	messagingHub "gitlab.com/iotTracker/messaging/hub"
 	clientException "gitlab.com/iotTracker/nerve/server/client/exception"
-	serverSession "gitlab.com/iotTracker/nerve/server/client/session"
+	clientSession "gitlab.com/iotTracker/nerve/server/client/session"
 	serverMessage "gitlab.com/iotTracker/nerve/server/message"
 	serverMessageHandler "gitlab.com/iotTracker/nerve/server/message/handler"
 	serverMessageHandlerException "gitlab.com/iotTracker/nerve/server/message/handler/exception"
@@ -40,7 +40,7 @@ func (h *handler) ValidateHandleRequest(request *serverMessageHandler.HandleRequ
 	return nil
 }
 
-func (h *handler) Handle(serverSession *serverSession.Session, request *serverMessageHandler.HandleRequest) (*serverMessageHandler.HandleResponse, error) {
+func (h *handler) Handle(clientSession *clientSession.Session, request *serverMessageHandler.HandleRequest) (*serverMessageHandler.HandleResponse, error) {
 	if err := h.ValidateHandleRequest(request); err != nil {
 		return nil, err
 	}
@@ -58,8 +58,8 @@ func (h *handler) Handle(serverSession *serverSession.Session, request *serverMe
 	}
 
 	// set server session to logged in and set device
-	serverSession.LoggedIn = true
-	serverSession.ZX303Device = loginResponse.ZX303
+	clientSession.LoggedIn = true
+	clientSession.ZX303Device = loginResponse.ZX303
 
 	responseMessages := make([]serverMessage.Message, 0)
 

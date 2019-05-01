@@ -10,7 +10,7 @@ import (
 	nerveException "gitlab.com/iotTracker/nerve/exception"
 	"gitlab.com/iotTracker/nerve/log"
 	clientException "gitlab.com/iotTracker/nerve/server/client/exception"
-	serverSession "gitlab.com/iotTracker/nerve/server/client/session"
+	clientSession "gitlab.com/iotTracker/nerve/server/client/session"
 	serverMessage "gitlab.com/iotTracker/nerve/server/message"
 	serverMessageHandler "gitlab.com/iotTracker/nerve/server/message/handler"
 	"net"
@@ -33,7 +33,7 @@ type Client struct {
 	socket           net.Conn
 	outgoingMessages chan serverMessage.Message
 	messageHandlers  map[serverMessage.Type]serverMessageHandler.Handler
-	serverSession    serverSession.Session
+	clientSession    clientSession.Session
 	heartbeat        chan bool
 	stop             chan bool
 	stopTX           chan bool
@@ -80,14 +80,14 @@ func (c *Client) Stop() error {
 func (c *Client) IdentifiedBy(identifier messagingClient.Identifier) bool {
 	return messagingClient.Identifier{
 		Type: messagingClient.ZX303,
-		Id:   c.serverSession.ZX303Device.Id,
+		Id:   c.clientSession.ZX303Device.Id,
 	} == identifier
 }
 
 func (c *Client) Identifier() messagingClient.Identifier {
 	return messagingClient.Identifier{
 		Type: messagingClient.ZX303,
-		Id:   c.serverSession.ZX303Device.Id,
+		Id:   c.clientSession.ZX303Device.Id,
 	}
 }
 
@@ -168,7 +168,7 @@ Comms:
 			log.Info("IN: ", inMessage.String())
 
 			// if the client is not logged in and this message is not of type Login terminate the connection
-			if !(c.serverSession.LoggedIn || inMessage.Type == serverMessage.Login) {
+			if !(c.clientSession.LoggedIn || inMessage.Type == serverMessage.Login) {
 				log.Warn(clientException.UnauthenticatedCommunication{Reasons: []string{"device not logged in"}}.Error())
 				c.stop <- true
 				continue
@@ -182,7 +182,7 @@ Comms:
 			case serverMessage.Login:
 				// handle the login message
 				response, err = c.messageHandlers[inMessage.Type].Handle(
-					&c.serverSession,
+					&c.clientSession,
 					&serverMessageHandler.HandleRequest{
 						Message: *inMessage,
 					})
@@ -192,7 +192,7 @@ Comms:
 					continue
 				}
 				// if the client has not been set to logged in stop the client connection
-				if !c.serverSession.LoggedIn {
+				if !c.clientSession.LoggedIn {
 					log.Warn(nerveException.Unexpected{Reasons: []string{
 						"client still not logged in",
 					}}.Error())
@@ -215,7 +215,7 @@ Comms:
 				c.heartbeat <- true
 				// handle the heartbeat message
 				response, err = c.messageHandlers[inMessage.Type].Handle(
-					&c.serverSession,
+					&c.clientSession,
 					&serverMessageHandler.HandleRequest{
 						Message: *inMessage,
 					})
@@ -235,7 +235,7 @@ Comms:
 
 				// otherwise handle the message
 				response, err = c.messageHandlers[inMessage.Type].Handle(
-					&c.serverSession,
+					&c.clientSession,
 					&serverMessageHandler.HandleRequest{
 						Message: *inMessage,
 					})

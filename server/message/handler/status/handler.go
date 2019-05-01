@@ -7,7 +7,7 @@ import (
 	zx303StatusReadingMessage "gitlab.com/iotTracker/messaging/message/zx303/reading/status"
 	messagingProducer "gitlab.com/iotTracker/messaging/producer"
 	hexPadding "gitlab.com/iotTracker/nerve/hex/padding"
-	serverSession "gitlab.com/iotTracker/nerve/server/client/session"
+	clientSession "gitlab.com/iotTracker/nerve/server/client/session"
 	serverMessage "gitlab.com/iotTracker/nerve/server/message"
 	serverMessageHandler "gitlab.com/iotTracker/nerve/server/message/handler"
 	serverMessageHandlerException "gitlab.com/iotTracker/nerve/server/message/handler/exception"
@@ -40,7 +40,7 @@ func (h *handler) ValidateHandleRequest(request *serverMessageHandler.HandleRequ
 	return nil
 }
 
-func (h *handler) Handle(serverSession *serverSession.Session, request *serverMessageHandler.HandleRequest) (*serverMessageHandler.HandleResponse, error) {
+func (h *handler) Handle(clientSession *clientSession.Session, request *serverMessageHandler.HandleRequest) (*serverMessageHandler.HandleResponse, error) {
 	if err := h.ValidateHandleRequest(request); err != nil {
 		return nil, err
 	}
@@ -69,12 +69,12 @@ func (h *handler) Handle(serverSession *serverSession.Session, request *serverMe
 	if err := h.brainQueueProducer.Produce(zx303StatusReadingMessage.Message{
 		Reading: zx303StatusReading.Reading{
 			DeviceId: id.Identifier{
-				Id: serverSession.ZX303Device.Id,
+				Id: clientSession.ZX303Device.Id,
 			},
-			OwnerPartyType:    serverSession.ZX303Device.OwnerPartyType,
-			OwnerId:           serverSession.ZX303Device.OwnerId,
-			AssignedPartyType: serverSession.ZX303Device.AssignedPartyType,
-			AssignedId:        serverSession.ZX303Device.AssignedId,
+			OwnerPartyType:    clientSession.ZX303Device.OwnerPartyType,
+			OwnerId:           clientSession.ZX303Device.OwnerId,
+			AssignedPartyType: clientSession.ZX303Device.AssignedPartyType,
+			AssignedId:        clientSession.ZX303Device.AssignedId,
 			Timestamp:         time.Now().UTC().Unix(),
 			BatteryPercentage: batteryPercentage,
 			UploadInterval:    uploadInterval,
