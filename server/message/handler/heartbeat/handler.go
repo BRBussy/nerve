@@ -1,7 +1,6 @@
 package heartbeat
 
 import (
-	"gitlab.com/iotTracker/nerve/log"
 	clientSession "gitlab.com/iotTracker/nerve/server/client/session"
 	serverMessageHandler "gitlab.com/iotTracker/nerve/server/message/handler"
 	serverMessageHandlerException "gitlab.com/iotTracker/nerve/server/message/handler/exception"
@@ -27,8 +26,6 @@ func (h *handler) Handle(clientSession *clientSession.Session, request *serverMe
 	if err := h.ValidateHandleRequest(request); err != nil {
 		return nil, err
 	}
-
-	log.Info("Heartbeat")
 
 	return &serverMessageHandler.HandleResponse{}, nil
 }

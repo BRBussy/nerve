@@ -6,6 +6,7 @@ import (
 	zx303TaskStep "gitlab.com/iotTracker/brain/tracker/zx303/task/step"
 	messagingClient "gitlab.com/iotTracker/messaging/client"
 	messagingHub "gitlab.com/iotTracker/messaging/hub"
+	messagingHubException "gitlab.com/iotTracker/messaging/hub/exception"
 	messagingMessage "gitlab.com/iotTracker/messaging/message"
 	zx303TransmitMessage "gitlab.com/iotTracker/messaging/message/zx303/transmit"
 	nerveException "gitlab.com/iotTracker/nerve/exception"
@@ -30,15 +31,17 @@ const (
 )
 
 type Client struct {
-	messagingHub     messagingHub.Hub
-	socket           net.Conn
-	outgoingMessages chan serverMessage.Message
-	messageHandlers  map[serverMessage.Type]serverMessageHandler.Handler
-	clientSession    clientSession.Session
-	heartbeat        chan bool
-	stop             chan bool
-	stopTX           chan bool
-	stopRX           bool
+	messagingHub        messagingHub.Hub
+	socket              net.Conn
+	outgoingMessages    chan serverMessage.Message
+	messageHandlers     map[serverMessage.Type]serverMessageHandler.Handler
+	clientSession       clientSession.Session
+	heartbeat           chan bool
+	stop                chan bool
+	stopTX              chan bool
+	stopRX              bool
+	waitingForReconnect bool
+	endLifecycle        chan bool
 }
 
 func New(
@@ -55,6 +58,7 @@ func New(
 		stopRX:           false,
 		stop:             make(chan bool),
 		messagingHub:     messagingHub,
+		endLifecycle:     make(chan bool),
 	}
 }
 
@@ -74,7 +78,10 @@ func (c *Client) Send(message messagingMessage.Message) error {
 }
 
 func (c *Client) Stop() error {
-	c.stop <- true
+	c.stopTX <- true
+	c.stopRX = true
+	c.socket.Close()
+	c.endLifecycle <- true
 	return nil
 }
 
@@ -113,6 +120,9 @@ LifeCycle:
 			c.stopRX = true
 			c.socket.Close()
 			c.messagingHub.DeRegisterClient(c)
+			break LifeCycle
+
+		case <-c.endLifecycle:
 			break LifeCycle
 		}
 	}
@@ -205,12 +215,68 @@ Comms:
 
 				// register client with messaging hub
 				if err := c.messagingHub.RegisterClient(c); err != nil {
-					log.Warn(nerveException.Unexpected{Reasons: []string{
-						"registering client with hub",
-						err.Error(),
-					}})
-					c.stop <- true
-					continue
+					switch err.(type) {
+					case messagingHubException.ClientAlreadyRegistered:
+						// get client from messaging hub
+						alreadyRegisteredClient, err := c.messagingHub.GetClient(c.Identifier())
+						if err != nil {
+							log.Warn(nerveException.Unexpected{Reasons: []string{
+								"retrieving client from hub",
+								err.Error(),
+							}})
+							c.stop <- true
+							continue
+						}
+						// cast to this client type
+						zx303ServerClient, ok := alreadyRegisteredClient.(*Client)
+						if !ok {
+							log.Warn(nerveException.Unexpected{Reasons: []string{
+								"could not cast client to zx303Client.Client",
+								err.Error(),
+							}})
+							c.stop <- true
+							continue
+						}
+
+						if !zx303ServerClient.waitingForReconnect {
+							// if that client is not waiting for reconnect
+							// terminate this connection
+							log.Warn(nerveException.Unexpected{Reasons: []string{
+								"already registered client not waiting for reconnect",
+								err.Error(),
+							}})
+							c.stop <- true
+							continue
+						}
+
+						// deRegister that client and register this in it's place
+						if err := c.messagingHub.DeRegisterClient(alreadyRegisteredClient); err != nil {
+							log.Warn(nerveException.Unexpected{Reasons: []string{
+								"deRegistering alreadyRegisteredClient",
+								err.Error(),
+							}})
+							c.stop <- true
+							continue
+						}
+
+						// register this client in it's place
+						if err := c.messagingHub.RegisterClient(c); err != nil {
+							log.Warn(nerveException.Unexpected{Reasons: []string{
+								"registering client with hub",
+								err.Error(),
+							}})
+							c.stop <- true
+							continue
+						}
+
+					default:
+						log.Warn(nerveException.Unexpected{Reasons: []string{
+							"registering client with hub",
+							err.Error(),
+						}})
+						c.stop <- true
+						continue
+					}
 				}
 
 			case serverMessage.Heartbeat:
@@ -269,12 +335,22 @@ Comms:
 			break Comms
 		}
 	}
-	log.Info(fmt.Sprintf("connection with %s terminated", c.socket.RemoteAddr().String()))
+	//log.Info(fmt.Sprintf("connection with %s terminated", c.socket.RemoteAddr().String()))
 }
 
 func (c *Client) HandleTaskStep(step zx303TaskStep.Step) (zx303TaskStep.Status, error) {
 	switch step.Type {
 	case zx303TaskStep.SendResetCommand:
+		// send restart device command to device
+		c.outgoingMessages <- serverMessage.Message{
+			Type:       serverMessage.RestartDevice,
+			DataLength: 1,
+			Data:       "01",
+		}
+
+		// mark that we are waiting for reconnect
+		c.waitingForReconnect = true
+
 		return zx303TaskStep.Finished, nil
 
 	case zx303TaskStep.WaitForReconnect:

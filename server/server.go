@@ -44,7 +44,7 @@ func (s *server) Start() error {
 	var err error
 	s.listener, err = net.Listen("tcp4", fmt.Sprintf("%s:%s", s.IPAddress, s.Port))
 	if err != nil {
-		return serverException.Listen{Reasons: []string{"", err.Error()}}
+		return serverException.Listen{Reasons: []string{err.Error()}}
 	}
 	defer func() {
 		log.Info("closing listener")
