@@ -3,6 +3,9 @@ package client
 import (
 	"bufio"
 	"fmt"
+	messagingClient "gitlab.com/iotTracker/messaging/client"
+	messagingMessage "gitlab.com/iotTracker/messaging/message"
+	zx303TransmitMessage "gitlab.com/iotTracker/messaging/message/zx303/transmit"
 	nerveException "gitlab.com/iotTracker/nerve/exception"
 	"gitlab.com/iotTracker/nerve/log"
 	clientException "gitlab.com/iotTracker/nerve/server/client/exception"
@@ -50,15 +53,34 @@ func New(
 	}
 }
 
-func (c *Client) Send(message serverMessage.Message) error {
-	messageBytes, err := message.Bytes()
-	if err != nil {
-		return clientException.MessageConversion{Reasons: []string{"message to bytes", err.Error()}}
+func (c *Client) Send(message messagingMessage.Message) error {
+	nerveServerMessage, ok := message.(zx303TransmitMessage.Message)
+	if !ok {
+		return nerveException.Unexpected{Reasons: []string{"could not cast messagingMessage to zx303TransmitMessage.Message"}}
 	}
-	if _, err = c.socket.Write(messageBytes); err != nil {
-		return clientException.SendingMessage{Message: message, Reasons: []string{err.Error()}}
-	}
+
+	c.outgoingMessages <- nerveServerMessage.Message
+
 	return nil
+}
+
+func (c *Client) Stop() error {
+	c.stop <- true
+	return nil
+}
+
+func (c *Client) IdentifiedBy(identifier messagingClient.Identifier) bool {
+	return messagingClient.Identifier{
+		Type: messagingClient.ZX303,
+		Id:   c.serverSession.ZX303Device.Id,
+	} == identifier
+}
+
+func (c *Client) Identifier() messagingClient.Identifier {
+	return messagingClient.Identifier{
+		Type: messagingClient.ZX303,
+		Id:   c.serverSession.ZX303Device.Id,
+	}
 }
 
 func (c *Client) HandleLifeCycle() {
