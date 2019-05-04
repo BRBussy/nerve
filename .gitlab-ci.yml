@@ -28,6 +28,7 @@ before_script:
  # navigate and clone messaging repo dependencies
  - cd /go/src/gitlab.com/iotTracker
  - git clone https://gitlab+deploy-token-61057:${MESSAGING_CI_JOB_TOKEN}@gitlab.com/iotTracker/messaging
+ - git clone https://gitlab+deploy-token-64822:${BRAIN_CI_JOB_TOKEN}@gitlab.com/iotTracker/brain
 
  # create link between brain build directory and iot tracker directory so that
  # golang import paths work correctly
@@ -39,14 +40,11 @@ deploy_stage:
   only:
     - master
   script:
-    - ls
-    - pwd
     - cd /go/src/gitlab.com/iotTracker/nerve/start
     - go get
     - cd ../build
     - env GOOD=linux GOARCH=amd64 go build -o=nerve /go/src/gitlab.com/iotTracker/nerve/start
-    - ls
-    - scp ./nerve gitlabcli@spotnav.net:/home/gitlabcli
-    - ssh gitlabcli@spotnav.net "sudo /bin/systemctl stop nerve.service"
-    - ssh gitlabcli@spotnav.net "sudo /bin/mv /home/gitlabcli/nerve /home/nerve"
-    - ssh gitlabcli@spotnav.net "sudo /bin/systemctl start nerve.service"
+    - scp ./nerve gitlabci@nerve.spotnav.net:/home/gitlabci
+    # - ssh gitlabci@nerve.spotnav.net "sudo /bin/systemctl stop nerve.service"
+    # - ssh gitlabci@nerve.spotnav.net "sudo /bin/mv /home/gitlabcli/nerve /home/nerve"
+    # - ssh gitlabci@nerve.spotnav.net "sudo /bin/systemctl start nerve.service"
