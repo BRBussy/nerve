@@ -1,18 +1,18 @@
 package handler
 
 import (
-	ServerMessage "gitlab.com/iotTracker/nerve/server/message"
+	clientSession "gitlab.com/iotTracker/nerve/server/client/session"
+	serverMessage "gitlab.com/iotTracker/nerve/server/message"
 )
 
 type Handler interface {
-	Handle(request *HandleRequest) (*HandleResponse, error)
+	Handle(clientSession *clientSession.Session, request *HandleRequest) (*HandleResponse, error)
 }
 
 type HandleRequest struct {
-	Message  ServerMessage.Message
-	LoggedIn bool
+	Message serverMessage.Message
 }
 
 type HandleResponse struct {
-	Messages []ServerMessage.Message
+	Messages []serverMessage.Message
 }

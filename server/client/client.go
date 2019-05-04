@@ -3,8 +3,16 @@ package client
 import (
 	"bufio"
 	"fmt"
+	zx303TaskStep "gitlab.com/iotTracker/brain/tracker/zx303/task/step"
+	messagingClient "gitlab.com/iotTracker/messaging/client"
+	messagingHub "gitlab.com/iotTracker/messaging/hub"
+	messagingHubException "gitlab.com/iotTracker/messaging/hub/exception"
+	messagingMessage "gitlab.com/iotTracker/messaging/message"
+	zx303TransmitMessage "gitlab.com/iotTracker/messaging/message/zx303/transmit"
+	nerveException "gitlab.com/iotTracker/nerve/exception"
 	"gitlab.com/iotTracker/nerve/log"
 	clientException "gitlab.com/iotTracker/nerve/server/client/exception"
+	clientSession "gitlab.com/iotTracker/nerve/server/client/session"
 	serverMessage "gitlab.com/iotTracker/nerve/server/message"
 	serverMessageHandler "gitlab.com/iotTracker/nerve/server/message/handler"
 	"net"
@@ -17,47 +25,81 @@ const (
 	// Time allowed between heartbeats
 	// if no heartbeat received in after this time the connection
 	// is terminated
-	HeartbeatWait = 30 * time.Second
+	HeartbeatWait = 180 * time.Second
 	// Maximum message size allowed from peer.
 	MaxMessageSize = 1024
 )
 
-type client struct {
-	socket           net.Conn
-	outgoingMessages chan serverMessage.Message
-	messageHandlers  map[serverMessage.Type]serverMessageHandler.Handler
-	loggedIn         bool
-	stop             chan bool
-	stopTX           chan bool
-	stopRX           bool
+type Client struct {
+	messagingHub        messagingHub.Hub
+	socket              net.Conn
+	outgoingMessages    chan serverMessage.Message
+	messageHandlers     map[serverMessage.Type]serverMessageHandler.Handler
+	clientSession       clientSession.Session
+	heartbeat           chan bool
+	stop                chan bool
+	stopTX              chan bool
+	stopRX              bool
+	waitingForReconnect bool
+	endLifecycle        chan bool
 }
 
 func New(
 	socket net.Conn,
 	messageHandlers map[serverMessage.Type]serverMessageHandler.Handler,
-) *client {
-	return &client{
+	messagingHub messagingHub.Hub,
+) *Client {
+	return &Client{
 		socket:           socket,
 		outgoingMessages: make(chan serverMessage.Message),
 		messageHandlers:  messageHandlers,
+		heartbeat:        make(chan bool),
 		stopTX:           make(chan bool),
 		stopRX:           false,
 		stop:             make(chan bool),
+		messagingHub:     messagingHub,
+		endLifecycle:     make(chan bool),
 	}
 }
 
-func (c *client) Send(message serverMessage.Message) error {
-	messageBytes, err := message.Bytes()
-	if err != nil {
-		return clientException.MessageConversion{Reasons: []string{"message to bytes", err.Error()}}
+func (c *Client) Send(message messagingMessage.Message) error {
+	if message.Type() != messagingMessage.ZX303Transmit {
+		return nerveException.Unexpected{Reasons: []string{"invalid message type provided to zx303 client send"}}
 	}
-	if _, err = c.socket.Write(messageBytes); err != nil {
-		return clientException.SendingMessage{Message: message, Reasons: []string{err.Error()}}
+
+	nerveServerMessage, ok := message.(zx303TransmitMessage.Message)
+	if !ok {
+		return nerveException.Unexpected{Reasons: []string{"could not cast messagingMessage to zx303TransmitMessage.Message"}}
 	}
+
+	c.outgoingMessages <- nerveServerMessage.Message
+
 	return nil
 }
 
-func (c *client) HandleLifeCycle() {
+func (c *Client) Stop() error {
+	c.stopTX <- true
+	c.stopRX = true
+	c.socket.Close()
+	c.endLifecycle <- true
+	return nil
+}
+
+func (c *Client) IdentifiedBy(identifier messagingClient.Identifier) bool {
+	return messagingClient.Identifier{
+		Type: messagingClient.ZX303,
+		Id:   c.clientSession.ZX303Device.Id,
+	} == identifier
+}
+
+func (c *Client) Identifier() messagingClient.Identifier {
+	return messagingClient.Identifier{
+		Type: messagingClient.ZX303,
+		Id:   c.clientSession.ZX303Device.Id,
+	}
+}
+
+func (c *Client) HandleLifeCycle() {
 	heartbeatCountdownTimer := time.NewTimer(HeartbeatWait)
 LifeCycle:
 	for {
@@ -67,24 +109,33 @@ LifeCycle:
 			c.stopTX <- true
 			c.stopRX = true
 			c.socket.Close()
+			c.messagingHub.DeRegisterClient(c)
 			break LifeCycle
+
+		case <-c.heartbeat:
+			heartbeatCountdownTimer.Reset(HeartbeatWait)
 
 		case <-c.stop:
 			c.stopTX <- true
 			c.stopRX = true
 			c.socket.Close()
+			c.messagingHub.DeRegisterClient(c)
+			break LifeCycle
+
+		case <-c.endLifecycle:
 			break LifeCycle
 		}
 	}
 	log.Info(fmt.Sprintf("%s lifecycle ended", c.socket.RemoteAddr().String()))
 }
 
-func (c *client) HandleTX() {
+func (c *Client) HandleTX() {
 	for {
 		select {
 		case outMessage, ok := <-c.outgoingMessages:
 			if !ok {
-				log.Info("the outgoing messages channel has been closed")
+				log.Warn("the outgoing messages channel has been closed")
+				c.stop <- true
 				return
 			}
 			outMessageBytes, err := outMessage.Bytes()
@@ -107,7 +158,7 @@ func (c *client) HandleTX() {
 	}
 }
 
-func (c *client) HandleRX() {
+func (c *Client) HandleRX() {
 
 	log.Info(fmt.Sprintf("serving %s", c.socket.RemoteAddr().String()))
 	reader := bufio.NewReaderSize(c.socket, MaxMessageSize)
@@ -129,28 +180,143 @@ Comms:
 			}
 			log.Info("IN: ", inMessage.String())
 
-			// if this message is a login message
-			if inMessage.Type == serverMessage.Login {
-				// log in the client device
-				c.loggedIn = true
-			} else if !c.loggedIn {
-				// otherwise if this message is not a logged in message, and the client is not logged in
-				// stop the client
-				log.Warn(clientException.UnauthenticatedCommunication{Reasons: []string{"device not logged in"}})
+			// if the client is not logged in and this message is not of type Login terminate the connection
+			if !(c.clientSession.LoggedIn || inMessage.Type == serverMessage.Login) {
+				log.Warn(clientException.UnauthenticatedCommunication{Reasons: []string{"device not logged in"}}.Error())
 				c.stop <- true
 				continue
 			}
 
-			// otherwise, if there is a handler for this message type, handle the message
-			if c.messageHandlers[inMessage.Type] == nil {
-				log.Warn(clientException.NoHandler{Message: *inMessage}.Error())
-				continue
+			var response *serverMessageHandler.HandleResponse
+
+			// if this is a log in message then we do not need to check that the client
+			// is logged in before handling the message
+			switch inMessage.Type {
+			case serverMessage.Login:
+				// handle the login message
+				response, err = c.messageHandlers[inMessage.Type].Handle(
+					&c.clientSession,
+					&serverMessageHandler.HandleRequest{
+						Message: *inMessage,
+					})
+				if err != nil {
+					log.Warn(err.Error())
+					c.stop <- true
+					continue
+				}
+				// if the client has not been set to logged in stop the client connection
+				if !c.clientSession.LoggedIn {
+					log.Warn(nerveException.Unexpected{Reasons: []string{
+						"client still not logged in",
+					}}.Error())
+					c.stop <- true
+					continue
+				}
+
+				// register client with messaging hub
+				if err := c.messagingHub.RegisterClient(c); err != nil {
+					switch err.(type) {
+					case messagingHubException.ClientAlreadyRegistered:
+						// get client from messaging hub
+						alreadyRegisteredClient, err := c.messagingHub.GetClient(c.Identifier())
+						if err != nil {
+							log.Warn(nerveException.Unexpected{Reasons: []string{
+								"retrieving client from hub",
+								err.Error(),
+							}})
+							c.stop <- true
+							continue
+						}
+						// cast to this client type
+						zx303ServerClient, ok := alreadyRegisteredClient.(*Client)
+						if !ok {
+							log.Warn(nerveException.Unexpected{Reasons: []string{
+								"could not cast client to zx303Client.Client",
+								err.Error(),
+							}})
+							c.stop <- true
+							continue
+						}
+
+						if !zx303ServerClient.waitingForReconnect {
+							// if that client is not waiting for reconnect
+							// terminate this connection
+							log.Warn(nerveException.Unexpected{Reasons: []string{
+								"already registered client not waiting for reconnect",
+								err.Error(),
+							}})
+							c.stop <- true
+							continue
+						}
+
+						// deRegister that client and register this in it's place
+						if err := c.messagingHub.DeRegisterClient(alreadyRegisteredClient); err != nil {
+							log.Warn(nerveException.Unexpected{Reasons: []string{
+								"deRegistering alreadyRegisteredClient",
+								err.Error(),
+							}})
+							c.stop <- true
+							continue
+						}
+
+						// register this client in it's place
+						if err := c.messagingHub.RegisterClient(c); err != nil {
+							log.Warn(nerveException.Unexpected{Reasons: []string{
+								"registering client with hub",
+								err.Error(),
+							}})
+							c.stop <- true
+							continue
+						}
+
+					default:
+						log.Warn(nerveException.Unexpected{Reasons: []string{
+							"registering client with hub",
+							err.Error(),
+						}})
+						c.stop <- true
+						continue
+					}
+				}
+
+			case serverMessage.Heartbeat:
+				// notify the lifecycle monitor of the heartbeat
+				c.heartbeat <- true
+				// handle the heartbeat message
+				response, err = c.messageHandlers[inMessage.Type].Handle(
+					&c.clientSession,
+					&serverMessageHandler.HandleRequest{
+						Message: *inMessage,
+					})
+				if err != nil {
+					log.Warn(err.Error())
+					c.stop <- true
+					continue
+				}
+
+			default:
+				// it is not a Login Message and the device is logged in
+				if c.messageHandlers[inMessage.Type] == nil {
+					// if there is no handler log a warning and carry on
+					log.Warn(clientException.NoHandler{Message: *inMessage}.Error())
+					continue
+				}
+
+				// otherwise handle the message
+				response, err = c.messageHandlers[inMessage.Type].Handle(
+					&c.clientSession,
+					&serverMessageHandler.HandleRequest{
+						Message: *inMessage,
+					})
+				if err != nil {
+					log.Warn(err.Error())
+					continue
+				}
 			}
-			response, err := c.messageHandlers[inMessage.Type].Handle(&serverMessageHandler.HandleRequest{
-				Message: *inMessage,
-			})
-			if err != nil {
-				log.Warn(err.Error())
+
+			// if the response is nil do not attempt to send back response messages
+			if response == nil {
+				log.Warn(nerveException.Unexpected{Reasons: []string{"handler response is nil"}}.Error())
 				continue
 			}
 
@@ -169,5 +335,30 @@ Comms:
 			break Comms
 		}
 	}
-	log.Info(fmt.Sprintf("connection with %s terminated", c.socket.RemoteAddr().String()))
+	//log.Info(fmt.Sprintf("connection with %s terminated", c.socket.RemoteAddr().String()))
+}
+
+func (c *Client) HandleTaskStep(step zx303TaskStep.Step) (zx303TaskStep.Status, error) {
+	switch step.Type {
+	case zx303TaskStep.SendResetCommand:
+		// send restart device command to device
+		c.outgoingMessages <- serverMessage.Message{
+			Type:       serverMessage.RestartDevice,
+			DataLength: 1,
+			Data:       "01",
+		}
+
+		// mark that we are waiting for reconnect
+		c.waitingForReconnect = true
+
+		return zx303TaskStep.Finished, nil
+
+	case zx303TaskStep.WaitForReconnect:
+		return zx303TaskStep.Executing, nil
+
+	default:
+		return "", clientException.HandlingTaskStep{Reasons: []string{"invalid step type", string(step.Type)}}
+	}
+
+	return "", clientException.HandlingTaskStep{Reasons: []string{"invalid step type", string(step.Type)}}
 }

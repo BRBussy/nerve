@@ -2,12 +2,17 @@ package gpsPosition
 
 import (
 	"fmt"
+	"gitlab.com/iotTracker/brain/search/identifier/id"
+	zx303GPSReading "gitlab.com/iotTracker/brain/tracker/zx303/reading/gps"
+	zx303GPSReadingMessage "gitlab.com/iotTracker/messaging/message/zx303/reading/gps"
 	messagingProducer "gitlab.com/iotTracker/messaging/producer"
 	"gitlab.com/iotTracker/nerve/log"
+	clientSession "gitlab.com/iotTracker/nerve/server/client/session"
 	serverMessage "gitlab.com/iotTracker/nerve/server/message"
 	serverMessageHandler "gitlab.com/iotTracker/nerve/server/message/handler"
 	serverMessageHandlerException "gitlab.com/iotTracker/nerve/server/message/handler/exception"
 	"strconv"
+	"time"
 )
 
 type handler struct {
@@ -35,7 +40,7 @@ func (h *handler) ValidateHandleRequest(request *serverMessageHandler.HandleRequ
 	return nil
 }
 
-func (h *handler) Handle(request *serverMessageHandler.HandleRequest) (*serverMessageHandler.HandleResponse, error) {
+func (h *handler) Handle(clientSession *clientSession.Session, request *serverMessageHandler.HandleRequest) (*serverMessageHandler.HandleResponse, error) {
 	if err := h.ValidateHandleRequest(request); err != nil {
 		return nil, err
 	}
@@ -133,7 +138,23 @@ func (h *handler) Handle(request *serverMessageHandler.HandleRequest) (*serverMe
 		heading,
 	))
 
-	if err := h.brainQueueProducer.Produce([]byte("aweh gps")); err != nil {
+	if err := h.brainQueueProducer.Produce(zx303GPSReadingMessage.Message{
+		Reading: zx303GPSReading.Reading{
+			DeviceId: id.Identifier{
+				Id: clientSession.ZX303Device.Id,
+			},
+			OwnerPartyType:    clientSession.ZX303Device.OwnerPartyType,
+			OwnerId:           clientSession.ZX303Device.OwnerId,
+			AssignedPartyType: clientSession.ZX303Device.AssignedPartyType,
+			AssignedId:        clientSession.ZX303Device.AssignedId,
+			NoSatellites:      noSatellites,
+			TimeStamp:         time.Now().UTC().Unix(),
+			Latitude:          gpsLatitude,
+			Longitude:         gpsLongitude,
+			Speed:             speed,
+			Heading:           heading,
+		},
+	}); err != nil {
 		return nil, serverMessageHandlerException.MessageProduction{Reasons: []string{err.Error()}}
 	}
 

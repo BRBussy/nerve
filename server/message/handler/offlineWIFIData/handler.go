@@ -2,6 +2,7 @@ package offlineWIFIData
 
 import (
 	"gitlab.com/iotTracker/nerve/log"
+	clientSession "gitlab.com/iotTracker/nerve/server/client/session"
 	serverMessage "gitlab.com/iotTracker/nerve/server/message"
 	serverMessageHandler "gitlab.com/iotTracker/nerve/server/message/handler"
 	serverMessageHandlerException "gitlab.com/iotTracker/nerve/server/message/handler/exception"
@@ -27,7 +28,7 @@ func (h *handler) ValidateHandleRequest(request *serverMessageHandler.HandleRequ
 	return nil
 }
 
-func (h *handler) Handle(request *serverMessageHandler.HandleRequest) (*serverMessageHandler.HandleResponse, error) {
+func (h *handler) Handle(clientSession *clientSession.Session, request *serverMessageHandler.HandleRequest) (*serverMessageHandler.HandleResponse, error) {
 	if err := h.ValidateHandleRequest(request); err != nil {
 		return nil, err
 	}

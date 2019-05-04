@@ -2,19 +2,29 @@ package status
 
 import (
 	"fmt"
+	"gitlab.com/iotTracker/brain/search/identifier/id"
+	zx303StatusReading "gitlab.com/iotTracker/brain/tracker/zx303/reading/status"
+	zx303StatusReadingMessage "gitlab.com/iotTracker/messaging/message/zx303/reading/status"
+	messagingProducer "gitlab.com/iotTracker/messaging/producer"
 	hexPadding "gitlab.com/iotTracker/nerve/hex/padding"
-	"gitlab.com/iotTracker/nerve/log"
+	clientSession "gitlab.com/iotTracker/nerve/server/client/session"
 	serverMessage "gitlab.com/iotTracker/nerve/server/message"
 	serverMessageHandler "gitlab.com/iotTracker/nerve/server/message/handler"
 	serverMessageHandlerException "gitlab.com/iotTracker/nerve/server/message/handler/exception"
 	"strconv"
+	"time"
 )
 
 type handler struct {
+	brainQueueProducer messagingProducer.Producer
 }
 
-func New() serverMessageHandler.Handler {
-	return &handler{}
+func New(
+	brainQueueProducer messagingProducer.Producer,
+) serverMessageHandler.Handler {
+	return &handler{
+		brainQueueProducer: brainQueueProducer,
+	}
 }
 
 func (h *handler) ValidateHandleRequest(request *serverMessageHandler.HandleRequest) error {
@@ -30,7 +40,7 @@ func (h *handler) ValidateHandleRequest(request *serverMessageHandler.HandleRequ
 	return nil
 }
 
-func (h *handler) Handle(request *serverMessageHandler.HandleRequest) (*serverMessageHandler.HandleResponse, error) {
+func (h *handler) Handle(clientSession *clientSession.Session, request *serverMessageHandler.HandleRequest) (*serverMessageHandler.HandleResponse, error) {
 	if err := h.ValidateHandleRequest(request); err != nil {
 		return nil, err
 	}
@@ -51,18 +61,29 @@ func (h *handler) Handle(request *serverMessageHandler.HandleRequest) (*serverMe
 	if err != nil {
 		return nil, serverMessageHandlerException.Handling{Reasons: []string{"parsing upload interval", err.Error()}}
 	}
-	otherThing, err := strconv.ParseInt(request.Message.Data[8:], 16, 0)
-	if err != nil {
-		return nil, serverMessageHandlerException.Handling{Reasons: []string{"parsing otherThing", err.Error()}}
-	}
+	//otherThing, err := strconv.ParseInt(request.Message.Data[8:], 16, 0)
+	//if err != nil {
+	//	return nil, serverMessageHandlerException.Handling{Reasons: []string{"parsing otherThing", err.Error()}}
+	//}
 
-	log.Info(fmt.Sprintf("Status: Battery Percentage: %d%%, Software V%d, Timezone: %d, Upload Interval: %d, Other: %d",
-		batteryPercentage,
-		softwareVersion,
-		timezone,
-		uploadInterval,
-		otherThing,
-	))
+	if err := h.brainQueueProducer.Produce(zx303StatusReadingMessage.Message{
+		Reading: zx303StatusReading.Reading{
+			DeviceId: id.Identifier{
+				Id: clientSession.ZX303Device.Id,
+			},
+			OwnerPartyType:    clientSession.ZX303Device.OwnerPartyType,
+			OwnerId:           clientSession.ZX303Device.OwnerId,
+			AssignedPartyType: clientSession.ZX303Device.AssignedPartyType,
+			AssignedId:        clientSession.ZX303Device.AssignedId,
+			Timestamp:         time.Now().UTC().Unix(),
+			BatteryPercentage: batteryPercentage,
+			UploadInterval:    uploadInterval,
+			SoftwareVersion:   softwareVersion,
+			Timezone:          timezone,
+		},
+	}); err != nil {
+		return nil, serverMessageHandlerException.MessageProduction{Reasons: []string{err.Error()}}
+	}
 
 	return &serverMessageHandler.HandleResponse{Messages: []serverMessage.Message{{
 		Type:       request.Message.Type,
