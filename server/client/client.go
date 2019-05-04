@@ -348,7 +348,7 @@ func (c *Client) HandleTaskStep(step zx303TaskStep.Step) (zx303TaskStep.Status, 
 			Data:       "01",
 		}
 
-		// mark that we are waiting for reconnect
+		// mark that we are waiting for reconnects
 		c.waitingForReconnect = true
 
 		return zx303TaskStep.Finished, nil
