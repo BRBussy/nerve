@@ -45,6 +45,6 @@ deploy_stage:
     - cd ../build
     - env GOOD=linux GOARCH=amd64 go build -o=nerve /go/src/gitlab.com/iotTracker/nerve/start
     - scp ./nerve gitlabci@nerve01.spotnav.net:/home/gitlabci
-    # - ssh gitlabci@nerve01.spotnav.net "sudo /bin/systemctl stop nerve.service"
-    # - ssh gitlabci@nerve01.spotnav.net "sudo /bin/mv /home/gitlabcli/nerve /home/nerve"
-    # - ssh gitlabci@nerve01.spotnav.net "sudo /bin/systemctl start nerve.service"
+    - ssh gitlabci@nerve01.spotnav.net "sudo /bin/systemctl stop nerve.service"
+    - ssh gitlabci@nerve01.spotnav.net "sudo /bin/mv /home/gitlabci/nerve /home/nerve"
+    - ssh gitlabci@nerve01.spotnav.net "sudo /bin/systemctl start nerve.service"
