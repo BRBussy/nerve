@@ -27,8 +27,7 @@ const (
 	// Time allowed between heartbeats
 	// if no heartbeat received in after this time the connection
 	// is terminated
-	//HeartbeatWait = 180 * time.Second
-	HeartbeatWait = 10 * time.Second
+	HeartbeatWait = 180 * time.Second
 	// Maximum message size allowed from peer.
 	MaxMessageSize = 1024
 )
@@ -338,7 +337,6 @@ Comms:
 			break Comms
 		}
 	}
-	//log.Info(fmt.Sprintf("connection with %s terminated", c.socket.RemoteAddr().String()))
 }
 
 func (c *Client) HandleTaskStep(step zx303TaskStep.Step) (zx303TaskStep.Status, error) {
