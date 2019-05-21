@@ -3,6 +3,7 @@ package client
 import (
 	"bufio"
 	"fmt"
+	"gitlab.com/iotTracker/brain/search/identifier/id"
 	zx303DeviceAuthenticator "gitlab.com/iotTracker/brain/tracker/zx303/authenticator"
 	zx303TaskStep "gitlab.com/iotTracker/brain/tracker/zx303/task/step"
 	messagingClient "gitlab.com/iotTracker/messaging/client"
@@ -26,7 +27,8 @@ const (
 	// Time allowed between heartbeats
 	// if no heartbeat received in after this time the connection
 	// is terminated
-	HeartbeatWait = 180 * time.Second
+	//HeartbeatWait = 180 * time.Second
+	HeartbeatWait = 10 * time.Second
 	// Maximum message size allowed from peer.
 	MaxMessageSize = 1024
 )
@@ -82,10 +84,7 @@ func (c *Client) Send(message messagingMessage.Message) error {
 }
 
 func (c *Client) Stop() error {
-	c.stopTX <- true
-	c.stopRX = true
-	c.socket.Close()
-	c.endLifecycle <- true
+	c.stop <- true
 	return nil
 }
 
@@ -112,8 +111,6 @@ LifeCycle:
 			log.Info(fmt.Sprintf("timeout waiting for heartbeat from %s", c.socket.RemoteAddr().String()))
 			c.stopTX <- true
 			c.stopRX = true
-			c.socket.Close()
-			c.messagingHub.DeRegisterClient(c)
 			break LifeCycle
 
 		case <-c.heartbeat:
@@ -122,13 +119,22 @@ LifeCycle:
 		case <-c.stop:
 			c.stopTX <- true
 			c.stopRX = true
-			c.socket.Close()
-			c.messagingHub.DeRegisterClient(c)
 			break LifeCycle
 
 		case <-c.endLifecycle:
 			break LifeCycle
 		}
+	}
+
+	c.socket.Close()
+	c.messagingHub.DeRegisterClient(c)
+
+	if _, err := c.zx303DeviceAuthenticator.Logout(&zx303DeviceAuthenticator.LogoutRequest{
+		Identifier: id.Identifier{
+			Id: c.clientSession.ZX303Device.Id,
+		},
+	}); err != nil {
+		log.Error(err.Error())
 	}
 	log.Info(fmt.Sprintf("%s lifecycle ended", c.socket.RemoteAddr().String()))
 }
@@ -232,6 +238,7 @@ Comms:
 							c.stop <- true
 							continue
 						}
+
 						// cast to this client type
 						zx303ServerClient, ok := alreadyRegisteredClient.(*Client)
 						if !ok {
@@ -242,19 +249,10 @@ Comms:
 							c.stop <- true
 							continue
 						}
+						// stop the client
+						zx303ServerClient.Stop()
 
-						if !zx303ServerClient.waitingForReconnect {
-							// if that client is not waiting for reconnect
-							// terminate this connection
-							log.Warn(nerveException.Unexpected{Reasons: []string{
-								"already registered client not waiting for reconnect",
-								err.Error(),
-							}})
-							c.stop <- true
-							continue
-						}
-
-						// deRegister that client and register this in it's place
+						// deRegister that client from the hub
 						if err := c.messagingHub.DeRegisterClient(alreadyRegisteredClient); err != nil {
 							log.Warn(nerveException.Unexpected{Reasons: []string{
 								"deRegistering alreadyRegisteredClient",
