@@ -106,6 +106,7 @@ func main() {
 		"7018",
 		"0.0.0.0",
 		messagingHub,
+		zx303DeviceAuthenticator,
 	)
 	Server.RegisterMessageHandler(ServerMessage.Login, ServerLoginMessageHandler.New(
 		zx303DeviceAuthenticator,

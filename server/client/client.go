@@ -3,6 +3,7 @@ package client
 import (
 	"bufio"
 	"fmt"
+	zx303DeviceAuthenticator "gitlab.com/iotTracker/brain/tracker/zx303/authenticator"
 	zx303TaskStep "gitlab.com/iotTracker/brain/tracker/zx303/task/step"
 	messagingClient "gitlab.com/iotTracker/messaging/client"
 	messagingHub "gitlab.com/iotTracker/messaging/hub"
@@ -31,34 +32,37 @@ const (
 )
 
 type Client struct {
-	messagingHub        messagingHub.Hub
-	socket              net.Conn
-	outgoingMessages    chan serverMessage.Message
-	messageHandlers     map[serverMessage.Type]serverMessageHandler.Handler
-	clientSession       clientSession.Session
-	heartbeat           chan bool
-	stop                chan bool
-	stopTX              chan bool
-	stopRX              bool
-	waitingForReconnect bool
-	endLifecycle        chan bool
+	zx303DeviceAuthenticator zx303DeviceAuthenticator.Authenticator
+	messagingHub             messagingHub.Hub
+	socket                   net.Conn
+	outgoingMessages         chan serverMessage.Message
+	messageHandlers          map[serverMessage.Type]serverMessageHandler.Handler
+	clientSession            clientSession.Session
+	heartbeat                chan bool
+	stop                     chan bool
+	stopTX                   chan bool
+	stopRX                   bool
+	waitingForReconnect      bool
+	endLifecycle             chan bool
 }
 
 func New(
 	socket net.Conn,
 	messageHandlers map[serverMessage.Type]serverMessageHandler.Handler,
 	messagingHub messagingHub.Hub,
+	zx303DeviceAuthenticator zx303DeviceAuthenticator.Authenticator,
 ) *Client {
 	return &Client{
-		socket:           socket,
-		outgoingMessages: make(chan serverMessage.Message),
-		messageHandlers:  messageHandlers,
-		heartbeat:        make(chan bool),
-		stopTX:           make(chan bool),
-		stopRX:           false,
-		stop:             make(chan bool),
-		messagingHub:     messagingHub,
-		endLifecycle:     make(chan bool),
+		socket:                   socket,
+		outgoingMessages:         make(chan serverMessage.Message),
+		messageHandlers:          messageHandlers,
+		heartbeat:                make(chan bool),
+		stopTX:                   make(chan bool),
+		stopRX:                   false,
+		stop:                     make(chan bool),
+		messagingHub:             messagingHub,
+		endLifecycle:             make(chan bool),
+		zx303DeviceAuthenticator: zx303DeviceAuthenticator,
 	}
 }
 
@@ -153,6 +157,7 @@ func (c *Client) HandleTX() {
 
 		case <-c.stopTX:
 			log.Info(fmt.Sprintf("stopping TX with %s", c.socket.RemoteAddr().String()))
+			// log out device
 			return
 		}
 	}
