@@ -139,6 +139,7 @@ LifeCycle:
 }
 
 func (c *Client) HandleTX() {
+TX:
 	for {
 		select {
 		case outMessage, ok := <-c.outgoingMessages:
@@ -161,7 +162,7 @@ func (c *Client) HandleTX() {
 			log.Info("OUT: ", outMessage.String())
 
 		case <-c.stopTX:
-			return
+			break TX
 		}
 	}
 	log.Info(fmt.Sprintf("%s stopped TX", c.socket.RemoteAddr().String()))
