@@ -27,8 +27,7 @@ const (
 	// Time allowed between heartbeats
 	// if no heartbeat received in after this time the connection
 	// is terminated
-	//HeartbeatWait = 180 * time.Second
-	HeartbeatWait = 10 * time.Second
+	HeartbeatWait = 180 * time.Second
 	// Maximum message size allowed from peer.
 	MaxMessageSize = 1024
 )
@@ -45,6 +44,7 @@ type Client struct {
 	stopTX                   chan bool
 	stopRX                   bool
 	waitingForReconnect      bool
+	deRegisterOnLCEnd        bool
 	endLifecycle             chan bool
 }
 
@@ -65,6 +65,7 @@ func New(
 		messagingHub:             messagingHub,
 		endLifecycle:             make(chan bool),
 		zx303DeviceAuthenticator: zx303DeviceAuthenticator,
+		deRegisterOnLCEnd:        true,
 	}
 }
 
@@ -80,11 +81,6 @@ func (c *Client) Send(message messagingMessage.Message) error {
 
 	c.outgoingMessages <- nerveServerMessage.Message
 
-	return nil
-}
-
-func (c *Client) Stop() error {
-	c.stop <- true
 	return nil
 }
 
@@ -127,7 +123,9 @@ LC:
 	}
 
 	c.socket.Close()
-	c.messagingHub.DeRegisterClient(c)
+	if c.deRegisterOnLCEnd {
+		c.messagingHub.DeRegisterClient(c)
+	}
 
 	if c.clientSession.LoggedIn {
 		if _, err := c.zx303DeviceAuthenticator.Logout(&zx303DeviceAuthenticator.LogoutRequest{
@@ -162,7 +160,7 @@ TX:
 				c.stop <- true
 				continue
 			}
-			log.Info("OUT: ", outMessage.String())
+			//log.Info("OUT: ", outMessage.String())
 
 		case <-c.stopTX:
 			break TX
@@ -178,20 +176,22 @@ func (c *Client) HandleRX() {
 	scr := bufio.NewScanner(reader)
 	scr.Split(splitFunc)
 
-Comms:
+RX:
 	for {
 		// scan advances the scanner to the next token
 		// which in this case is a complete message from the device
 		// it returns false when the scan stops by reaching the end
 		// of the input or an error
+		processedInput := false
 		for scr.Scan() {
+			processedInput = true
 			// create message from data token
 			inMessage, err := serverMessage.New(string(scr.Bytes()))
 			if err != nil {
 				log.Warn(err.Error())
 				continue
 			}
-			log.Info("IN: ", inMessage.String())
+			//log.Info("IN: ", inMessage.String())
 
 			// if the client is not logged in and this message is not of type Login terminate the connection
 			if !(c.clientSession.LoggedIn || inMessage.Type == serverMessage.Login) {
@@ -251,23 +251,15 @@ Comms:
 							c.stop <- true
 							continue
 						}
-						// stop the client
-						zx303ServerClient.Stop()
 
-						// deRegister that client from the hub
-						if err := c.messagingHub.DeRegisterClient(alreadyRegisteredClient); err != nil {
-							log.Warn(nerveException.Unexpected{Reasons: []string{
-								"deRegistering alreadyRegisteredClient",
-								err.Error(),
-							}})
-							c.stop <- true
-							continue
-						}
+						// stop the client and prevent it from deRegistering itself
+						zx303ServerClient.deRegisterOnLCEnd = false
+						zx303ServerClient.stop <- true
 
-						// register this client in it's place
-						if err := c.messagingHub.RegisterClient(c); err != nil {
+						// reRegister this client to remove old client from the hub
+						if err := c.messagingHub.ReRegisterClient(c); err != nil {
 							log.Warn(nerveException.Unexpected{Reasons: []string{
-								"registering client with hub",
+								"reRegistering client",
 								err.Error(),
 							}})
 							c.stop <- true
@@ -337,7 +329,13 @@ Comms:
 				log.Warn("scanning stopped with error:", scr.Err().Error())
 				c.stop <- true
 			}
-			break Comms
+			break RX
+		}
+
+		// to stop when socket closed by peer
+		if (scr.Err() == nil && !processedInput) || c.stopRX {
+			c.stop <- true
+			break RX
 		}
 	}
 	log.Info(fmt.Sprintf("%s stopped RX", c.socket.RemoteAddr().String()))
