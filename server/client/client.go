@@ -43,7 +43,6 @@ type Client struct {
 	stop                     chan bool
 	stopTX                   chan bool
 	stopRX                   bool
-	waitingForReconnect      bool
 	deRegisterOnLCEnd        bool
 	endLifecycle             chan bool
 }
@@ -350,9 +349,6 @@ func (c *Client) HandleTaskStep(step zx303TaskStep.Step) (zx303TaskStep.Status, 
 			DataLength: 1,
 			Data:       "01",
 		}
-
-		// mark that we are waiting for reconnects
-		c.waitingForReconnect = true
 
 		return zx303TaskStep.Finished, nil
 
