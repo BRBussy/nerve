@@ -104,14 +104,14 @@ func (c *Client) Identifier() messagingClient.Identifier {
 
 func (c *Client) HandleLifeCycle() {
 	heartbeatCountdownTimer := time.NewTimer(HeartbeatWait)
-LifeCycle:
+LC:
 	for {
 		select {
 		case <-heartbeatCountdownTimer.C:
 			log.Info(fmt.Sprintf("timeout waiting for heartbeat from %s", c.socket.RemoteAddr().String()))
 			c.stopTX <- true
 			c.stopRX = true
-			break LifeCycle
+			break LC
 
 		case <-c.heartbeat:
 			heartbeatCountdownTimer.Reset(HeartbeatWait)
@@ -119,10 +119,10 @@ LifeCycle:
 		case <-c.stop:
 			c.stopTX <- true
 			c.stopRX = true
-			break LifeCycle
+			break LC
 
 		case <-c.endLifecycle:
-			break LifeCycle
+			break LC
 		}
 	}
 
@@ -138,7 +138,7 @@ LifeCycle:
 			log.Error(err.Error())
 		}
 	}
-	log.Info(fmt.Sprintf("%s lifecycle ended", c.socket.RemoteAddr().String()))
+	log.Info(fmt.Sprintf("%s stopped LC", c.socket.RemoteAddr().String()))
 }
 
 func (c *Client) HandleTX() {
