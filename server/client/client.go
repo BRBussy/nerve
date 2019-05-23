@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"gitlab.com/iotTracker/brain/search/identifier/id"
+	zx303DeviceAdministrator "gitlab.com/iotTracker/brain/tracker/zx303/administrator"
 	zx303DeviceAuthenticator "gitlab.com/iotTracker/brain/tracker/zx303/authenticator"
 	zx303TaskStep "gitlab.com/iotTracker/brain/tracker/zx303/task/step"
 	messagingClient "gitlab.com/iotTracker/messaging/client"
@@ -34,6 +35,7 @@ const (
 
 type Client struct {
 	zx303DeviceAuthenticator zx303DeviceAuthenticator.Authenticator
+	zx303DeviceAdministrator zx303DeviceAdministrator.Administrator
 	messagingHub             messagingHub.Hub
 	socket                   net.Conn
 	outgoingMessages         chan serverMessage.Message
@@ -52,6 +54,7 @@ func New(
 	messageHandlers map[serverMessage.Type]serverMessageHandler.Handler,
 	messagingHub messagingHub.Hub,
 	zx303DeviceAuthenticator zx303DeviceAuthenticator.Authenticator,
+	zx303DeviceAdministrator zx303DeviceAdministrator.Administrator,
 ) *Client {
 	return &Client{
 		socket:                   socket,
@@ -64,6 +67,7 @@ func New(
 		messagingHub:             messagingHub,
 		endLifecycle:             make(chan bool),
 		zx303DeviceAuthenticator: zx303DeviceAuthenticator,
+		zx303DeviceAdministrator: zx303DeviceAdministrator,
 		deRegisterOnLCEnd:        true,
 	}
 }
@@ -109,6 +113,13 @@ LC:
 			break LC
 
 		case <-c.heartbeat:
+			if _, err := c.zx303DeviceAdministrator.Heartbeat(&zx303DeviceAdministrator.HeartbeatRequest{
+				ZX303Identifier: id.Identifier{
+					Id: c.clientSession.ZX303Device.Id,
+				},
+			}); err != nil {
+				log.Error(err.Error())
+			}
 			heartbeatCountdownTimer.Reset(HeartbeatWait)
 
 		case <-c.stop:
@@ -128,7 +139,7 @@ LC:
 
 	if c.clientSession.LoggedIn {
 		if _, err := c.zx303DeviceAuthenticator.Logout(&zx303DeviceAuthenticator.LogoutRequest{
-			Identifier: id.Identifier{
+			ZX303Identifier: id.Identifier{
 				Id: c.clientSession.ZX303Device.Id,
 			},
 		}); err != nil {
@@ -320,6 +331,10 @@ RX:
 			for msgIdx := range response.Messages {
 				c.outgoingMessages <- response.Messages[msgIdx]
 			}
+
+			// execution reaches here a message was processed successfully
+			// any successful message counts as a heartbeat
+			c.heartbeat <- true
 		}
 
 		// check to see if scanner stopped with an error

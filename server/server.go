@@ -2,6 +2,7 @@ package server
 
 import (
 	"fmt"
+	zx303DeviceAdministrator "gitlab.com/iotTracker/brain/tracker/zx303/administrator"
 	zx303DeviceAuthenticator "gitlab.com/iotTracker/brain/tracker/zx303/authenticator"
 	messagingHub "gitlab.com/iotTracker/messaging/hub"
 	"gitlab.com/iotTracker/nerve/log"
@@ -20,6 +21,7 @@ type server struct {
 	MessageHandlers          map[serverMessage.Type]serverMessageHandler.Handler
 	MessagingHub             messagingHub.Hub
 	zx303DeviceAuthenticator zx303DeviceAuthenticator.Authenticator
+	zx303DeviceAdministrator zx303DeviceAdministrator.Administrator
 }
 
 func New(
@@ -27,6 +29,7 @@ func New(
 	IPAddress string,
 	MessagingHub messagingHub.Hub,
 	zx303DeviceAuthenticator zx303DeviceAuthenticator.Authenticator,
+	zx303DeviceAdministrator zx303DeviceAdministrator.Administrator,
 ) *server {
 
 	return &server{
@@ -36,6 +39,7 @@ func New(
 		done:                     make(chan bool),
 		MessagingHub:             MessagingHub,
 		zx303DeviceAuthenticator: zx303DeviceAuthenticator,
+		zx303DeviceAdministrator: zx303DeviceAdministrator,
 	}
 }
 
@@ -70,6 +74,7 @@ func (s *server) Start() error {
 			c, s.MessageHandlers,
 			s.MessagingHub,
 			s.zx303DeviceAuthenticator,
+			s.zx303DeviceAdministrator,
 		)
 		go newClient.HandleRX()
 		go newClient.HandleTX()
