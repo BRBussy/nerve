@@ -27,7 +27,8 @@ const (
 	// Time allowed between heartbeats
 	// if no heartbeat received in after this time the connection
 	// is terminated
-	HeartbeatWait = 180 * time.Second
+	//HeartbeatWait = 180 * time.Second
+	HeartbeatWait = 10 * time.Second
 	// Maximum message size allowed from peer.
 	MaxMessageSize = 1024
 )
@@ -128,12 +129,14 @@ LifeCycle:
 	c.socket.Close()
 	c.messagingHub.DeRegisterClient(c)
 
-	if _, err := c.zx303DeviceAuthenticator.Logout(&zx303DeviceAuthenticator.LogoutRequest{
-		Identifier: id.Identifier{
-			Id: c.clientSession.ZX303Device.Id,
-		},
-	}); err != nil {
-		log.Error(err.Error())
+	if c.clientSession.LoggedIn {
+		if _, err := c.zx303DeviceAuthenticator.Logout(&zx303DeviceAuthenticator.LogoutRequest{
+			Identifier: id.Identifier{
+				Id: c.clientSession.ZX303Device.Id,
+			},
+		}); err != nil {
+			log.Error(err.Error())
+		}
 	}
 	log.Info(fmt.Sprintf("%s lifecycle ended", c.socket.RemoteAddr().String()))
 }
