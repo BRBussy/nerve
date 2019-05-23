@@ -3,6 +3,9 @@ package client
 import (
 	"bufio"
 	"fmt"
+	"gitlab.com/iotTracker/brain/search/identifier/id"
+	zx303DeviceAdministrator "gitlab.com/iotTracker/brain/tracker/zx303/administrator"
+	zx303DeviceAuthenticator "gitlab.com/iotTracker/brain/tracker/zx303/authenticator"
 	zx303TaskStep "gitlab.com/iotTracker/brain/tracker/zx303/task/step"
 	messagingClient "gitlab.com/iotTracker/messaging/client"
 	messagingHub "gitlab.com/iotTracker/messaging/hub"
@@ -31,34 +34,41 @@ const (
 )
 
 type Client struct {
-	messagingHub        messagingHub.Hub
-	socket              net.Conn
-	outgoingMessages    chan serverMessage.Message
-	messageHandlers     map[serverMessage.Type]serverMessageHandler.Handler
-	clientSession       clientSession.Session
-	heartbeat           chan bool
-	stop                chan bool
-	stopTX              chan bool
-	stopRX              bool
-	waitingForReconnect bool
-	endLifecycle        chan bool
+	zx303DeviceAuthenticator zx303DeviceAuthenticator.Authenticator
+	zx303DeviceAdministrator zx303DeviceAdministrator.Administrator
+	messagingHub             messagingHub.Hub
+	socket                   net.Conn
+	outgoingMessages         chan serverMessage.Message
+	messageHandlers          map[serverMessage.Type]serverMessageHandler.Handler
+	clientSession            clientSession.Session
+	heartbeat                chan bool
+	stop                     chan bool
+	stopTX                   chan bool
+	stopRX                   bool
+	deRegisterOnLCEnd        bool
+	endLifecycle             chan bool
 }
 
 func New(
 	socket net.Conn,
 	messageHandlers map[serverMessage.Type]serverMessageHandler.Handler,
 	messagingHub messagingHub.Hub,
+	zx303DeviceAuthenticator zx303DeviceAuthenticator.Authenticator,
+	zx303DeviceAdministrator zx303DeviceAdministrator.Administrator,
 ) *Client {
 	return &Client{
-		socket:           socket,
-		outgoingMessages: make(chan serverMessage.Message),
-		messageHandlers:  messageHandlers,
-		heartbeat:        make(chan bool),
-		stopTX:           make(chan bool),
-		stopRX:           false,
-		stop:             make(chan bool),
-		messagingHub:     messagingHub,
-		endLifecycle:     make(chan bool),
+		socket:                   socket,
+		outgoingMessages:         make(chan serverMessage.Message),
+		messageHandlers:          messageHandlers,
+		heartbeat:                make(chan bool),
+		stopTX:                   make(chan bool),
+		stopRX:                   false,
+		stop:                     make(chan bool),
+		messagingHub:             messagingHub,
+		endLifecycle:             make(chan bool),
+		zx303DeviceAuthenticator: zx303DeviceAuthenticator,
+		zx303DeviceAdministrator: zx303DeviceAdministrator,
+		deRegisterOnLCEnd:        true,
 	}
 }
 
@@ -74,14 +84,6 @@ func (c *Client) Send(message messagingMessage.Message) error {
 
 	c.outgoingMessages <- nerveServerMessage.Message
 
-	return nil
-}
-
-func (c *Client) Stop() error {
-	c.stopTX <- true
-	c.stopRX = true
-	c.socket.Close()
-	c.endLifecycle <- true
 	return nil
 }
 
@@ -101,35 +103,57 @@ func (c *Client) Identifier() messagingClient.Identifier {
 
 func (c *Client) HandleLifeCycle() {
 	heartbeatCountdownTimer := time.NewTimer(HeartbeatWait)
-LifeCycle:
+LC:
 	for {
 		select {
 		case <-heartbeatCountdownTimer.C:
 			log.Info(fmt.Sprintf("timeout waiting for heartbeat from %s", c.socket.RemoteAddr().String()))
 			c.stopTX <- true
 			c.stopRX = true
-			c.socket.Close()
-			c.messagingHub.DeRegisterClient(c)
-			break LifeCycle
+			break LC
 
 		case <-c.heartbeat:
+			if _, err := c.zx303DeviceAdministrator.Heartbeat(&zx303DeviceAdministrator.HeartbeatRequest{
+				ZX303Identifier: id.Identifier{
+					Id: c.clientSession.ZX303Device.Id,
+				},
+			}); err != nil {
+				log.Error(err.Error())
+				c.stopTX <- true
+				c.stopRX = true
+				break LC
+			}
 			heartbeatCountdownTimer.Reset(HeartbeatWait)
 
 		case <-c.stop:
 			c.stopTX <- true
 			c.stopRX = true
-			c.socket.Close()
-			c.messagingHub.DeRegisterClient(c)
-			break LifeCycle
+			break LC
 
 		case <-c.endLifecycle:
-			break LifeCycle
+			break LC
 		}
 	}
-	log.Info(fmt.Sprintf("%s lifecycle ended", c.socket.RemoteAddr().String()))
+
+	c.socket.Close()
+	if c.deRegisterOnLCEnd {
+		c.messagingHub.DeRegisterClient(c)
+	}
+
+	if c.clientSession.LoggedIn {
+		if _, err := c.zx303DeviceAuthenticator.Logout(&zx303DeviceAuthenticator.LogoutRequest{
+			ZX303Identifier: id.Identifier{
+				Id: c.clientSession.ZX303Device.Id,
+			},
+		}); err != nil {
+			log.Error(err.Error())
+		}
+	}
+	log.Info(fmt.Sprintf("%s stopped LC", c.socket.RemoteAddr().String()))
 }
 
 func (c *Client) HandleTX() {
+TX:
 	for {
 		select {
 		case outMessage, ok := <-c.outgoingMessages:
@@ -149,13 +173,13 @@ func (c *Client) HandleTX() {
 				c.stop <- true
 				continue
 			}
-			log.Info("OUT: ", outMessage.String())
+			//log.Info("OUT: ", outMessage.String())
 
 		case <-c.stopTX:
-			log.Info(fmt.Sprintf("stopping TX with %s", c.socket.RemoteAddr().String()))
-			return
+			break TX
 		}
 	}
+	log.Info(fmt.Sprintf("%s stopped TX", c.socket.RemoteAddr().String()))
 }
 
 func (c *Client) HandleRX() {
@@ -165,20 +189,22 @@ func (c *Client) HandleRX() {
 	scr := bufio.NewScanner(reader)
 	scr.Split(splitFunc)
 
-Comms:
+RX:
 	for {
 		// scan advances the scanner to the next token
 		// which in this case is a complete message from the device
 		// it returns false when the scan stops by reaching the end
 		// of the input or an error
+		processedInput := false
 		for scr.Scan() {
+			processedInput = true
 			// create message from data token
 			inMessage, err := serverMessage.New(string(scr.Bytes()))
 			if err != nil {
 				log.Warn(err.Error())
 				continue
 			}
-			log.Info("IN: ", inMessage.String())
+			//log.Info("IN: ", inMessage.String())
 
 			// if the client is not logged in and this message is not of type Login terminate the connection
 			if !(c.clientSession.LoggedIn || inMessage.Type == serverMessage.Login) {
@@ -227,6 +253,7 @@ Comms:
 							c.stop <- true
 							continue
 						}
+
 						// cast to this client type
 						zx303ServerClient, ok := alreadyRegisteredClient.(*Client)
 						if !ok {
@@ -238,31 +265,14 @@ Comms:
 							continue
 						}
 
-						if !zx303ServerClient.waitingForReconnect {
-							// if that client is not waiting for reconnect
-							// terminate this connection
-							log.Warn(nerveException.Unexpected{Reasons: []string{
-								"already registered client not waiting for reconnect",
-								err.Error(),
-							}})
-							c.stop <- true
-							continue
-						}
+						// stop the client and prevent it from deRegistering itself
+						zx303ServerClient.deRegisterOnLCEnd = false
+						zx303ServerClient.stop <- true
 
-						// deRegister that client and register this in it's place
-						if err := c.messagingHub.DeRegisterClient(alreadyRegisteredClient); err != nil {
+						// reRegister this client to remove old client from the hub
+						if err := c.messagingHub.ReRegisterClient(c); err != nil {
 							log.Warn(nerveException.Unexpected{Reasons: []string{
-								"deRegistering alreadyRegisteredClient",
-								err.Error(),
-							}})
-							c.stop <- true
-							continue
-						}
-
-						// register this client in it's place
-						if err := c.messagingHub.RegisterClient(c); err != nil {
-							log.Warn(nerveException.Unexpected{Reasons: []string{
-								"registering client with hub",
+								"reRegistering client",
 								err.Error(),
 							}})
 							c.stop <- true
@@ -324,6 +334,10 @@ Comms:
 			for msgIdx := range response.Messages {
 				c.outgoingMessages <- response.Messages[msgIdx]
 			}
+
+			// execution reaches here a message was processed successfully
+			// any successful message counts as a heartbeat
+			c.heartbeat <- true
 		}
 
 		// check to see if scanner stopped with an error
@@ -332,10 +346,16 @@ Comms:
 				log.Warn("scanning stopped with error:", scr.Err().Error())
 				c.stop <- true
 			}
-			break Comms
+			break RX
+		}
+
+		// to stop when socket closed by peer
+		if (scr.Err() == nil && !processedInput) || c.stopRX {
+			c.stop <- true
+			break RX
 		}
 	}
-	//log.Info(fmt.Sprintf("connection with %s terminated", c.socket.RemoteAddr().String()))
+	log.Info(fmt.Sprintf("%s stopped RX", c.socket.RemoteAddr().String()))
 }
 
 func (c *Client) HandleTaskStep(step zx303TaskStep.Step) (zx303TaskStep.Status, error) {
@@ -347,9 +367,6 @@ func (c *Client) HandleTaskStep(step zx303TaskStep.Step) (zx303TaskStep.Status, 
 			DataLength: 1,
 			Data:       "01",
 		}
-
-		// mark that we are waiting for reconnects
-		c.waitingForReconnect = true
 
 		return zx303TaskStep.Finished, nil
 

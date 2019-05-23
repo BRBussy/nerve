@@ -9,6 +9,7 @@ import (
 	"flag"
 	basicJsonRpcClient "gitlab.com/iotTracker/brain/communication/jsonRpc/client/basic"
 	authJsonRpcAdaptor "gitlab.com/iotTracker/brain/security/authorization/service/adaptor/jsonRpc"
+	zx303DeviceJsonRpcAdministrator "gitlab.com/iotTracker/brain/tracker/zx303/administrator/jsonRpc"
 	zx303DeviceJsonRpcAuthenticator "gitlab.com/iotTracker/brain/tracker/zx303/authenticator/jsonRpc"
 	zx303TaskJsonRpcAdministrator "gitlab.com/iotTracker/brain/tracker/zx303/task/administrator/jsonRpc"
 	"gitlab.com/iotTracker/nerve/log"
@@ -39,9 +40,9 @@ import (
 
 func main() {
 	kafkaBrokers := flag.String("kafkaBrokers", "localhost:9092", "ipAddress:port of each kafka broker node (, separated)")
-	brainUrl := flag.String("brainUrl", "http://localhost:9011/api", "url of brain service")
-	brainAPIUserUsername := flag.String("brainAPIUserUsername", "f5866326-1bf0-44d4-8add-1e60c32bf175", "username of brain api user")
-	brainAPIUserPassword := flag.String("brainAPIUserPassword", "m7k8C7/PTI2OyHzSdWtdsr5bD1cZUkIlCboAvzGIHA8=", "password for brain api user")
+	brainUrl := flag.String("brainUrl", "http://localhost:9011/api-2", "url of brain service")
+	brainAPIUserUsername := flag.String("brainAPIUserUsername", "c877d101-79c1-4226-a309-14823c692d3d", "username of brain api user")
+	brainAPIUserPassword := flag.String("brainAPIUserPassword", "12345", "password for brain api user")
 	flag.Parse()
 
 	jsonRpcClient := basicJsonRpcClient.New(*brainUrl)
@@ -59,6 +60,9 @@ func main() {
 		}
 	}()
 
+	zx303DeviceAdministrator := zx303DeviceJsonRpcAdministrator.New(
+		jsonRpcClient,
+	)
 	zx303DeviceAuthenticator := zx303DeviceJsonRpcAuthenticator.New(
 		jsonRpcClient,
 	)
@@ -106,6 +110,8 @@ func main() {
 		"7018",
 		"0.0.0.0",
 		messagingHub,
+		zx303DeviceAuthenticator,
+		zx303DeviceAdministrator,
 	)
 	Server.RegisterMessageHandler(ServerMessage.Login, ServerLoginMessageHandler.New(
 		zx303DeviceAuthenticator,

@@ -46,7 +46,7 @@ func (h *handler) Handle(clientSession *clientSession.Session, request *serverMe
 	}
 
 	loginResponse, err := h.zx303DeviceAuthenticator.Login(&zx303DeviceAuthenticator.LoginRequest{
-		Identifier: zx303.Identifier{
+		ZX303Identifier: zx303.Identifier{
 			IMEI: request.Message.Data[:16],
 		},
 	})
