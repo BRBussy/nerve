@@ -161,11 +161,10 @@ func (c *Client) HandleTX() {
 			log.Info("OUT: ", outMessage.String())
 
 		case <-c.stopTX:
-			log.Info(fmt.Sprintf("stopping TX with %s", c.socket.RemoteAddr().String()))
-			// log out device
 			return
 		}
 	}
+	log.Info(fmt.Sprintf("%s stopped TX", c.socket.RemoteAddr().String()))
 }
 
 func (c *Client) HandleRX() {
@@ -337,6 +336,7 @@ Comms:
 			break Comms
 		}
 	}
+	log.Info(fmt.Sprintf("%s stopped RX", c.socket.RemoteAddr().String()))
 }
 
 func (c *Client) HandleTaskStep(step zx303TaskStep.Step) (zx303TaskStep.Status, error) {
