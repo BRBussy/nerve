@@ -2,6 +2,7 @@ package client
 
 import (
 	"encoding/hex"
+	"gitlab.com/iotTracker/nerve/log"
 	clientException "gitlab.com/iotTracker/nerve/server/client/exception"
 	"gitlab.com/iotTracker/nerve/server/message"
 	"io"
@@ -15,6 +16,8 @@ func splitFunc(data []byte, atEOF bool) (advance int, token []byte, err error) {
 
 	// convert input data to hex string
 	hexDataString := hex.EncodeToString(data)
+
+	log.Info("split: " + hexDataString)
 
 	// look for start and end of message markers
 	startIdx := strings.Index(hexDataString, message.StartMarker)
