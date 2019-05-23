@@ -119,6 +119,9 @@ LC:
 				},
 			}); err != nil {
 				log.Error(err.Error())
+				c.stopTX <- true
+				c.stopRX = true
+				break LC
 			}
 			heartbeatCountdownTimer.Reset(HeartbeatWait)
 
